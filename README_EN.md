@@ -23,6 +23,8 @@ Modern Web GUI for AutoGLM Phone Agent - AI-Powered Android Device Automation Ma
 
 ## ✨ Features
 
+- **Layered Agent Mode** - 🆕 Planner + executor dual-model collaboration for complex task planning and precise execution
+- **Chat Mode** - 🆕 Pure LLM/VLM conversation mode with text/image multimodal input, streaming output, thinking mode, no ADB required
 - **Fully Wireless Pairing** - 🆕 Android 11+ QR code pairing, no cable needed
 - **Multi-Device Control** - Manage and control multiple Android devices simultaneously with isolated states
 - **Conversational Task Management** - Control Android devices through chat interface
@@ -71,7 +73,7 @@ uvx autoglm-gui
 
 ## 📸 Screenshots
 
-Quick jump: [Classic Mode](#mode-classic) · [Dual Model (Enhanced)](#mode-dual) · [Layered Agent (Enhanced)](#mode-layered)
+Quick jump: [Classic Mode](#mode-classic) · [Dual Model (Enhanced)](#mode-dual) · [Layered Agent (Enhanced)](#mode-layered) · [Chat Mode](#mode-chat)
 
 ### Dual Model Architecture
 
@@ -275,7 +277,49 @@ Layered Agent is a stricter two-layer design: the **planner** focuses on decompo
 
 - **How it works**: the planner calls tools (e.g., `list_devices()` / `chat(device_id, message)`) to drive the executor; you can see tool calls and results in the UI
 - **Granularity**: the executor runs small, atomic sub-tasks with a step limit, so the planner can adjust strategy based on feedback
-- **Important limitation**: the executor doesn’t “take notes” or reliably extract/save text as variables—you must ask it to read what’s on screen when you need information
+- **Important limitation**: the executor doesn't "take notes" or reliably extract/save text as variables—you must ask it to read what's on screen when you need information
+
+<a id="mode-chat"></a>
+### 💬 Chat Mode
+
+Chat Mode is a pure LLM/VLM conversation mode without GUI Agent capabilities, suitable for pure text/image dialogue scenarios.
+
+- **How it works**: Directly calls LLM/VLM for conversation without device operations
+- **Input support**: Text + image multimodal input
+- **Output features**: Streaming output, thinking mode (`<think>...</think>` tags)
+- **Best for**: Pure conversation, image understanding, text generation without device operations
+- **Features**: No ADB required, simple configuration, fast response
+
+**Configuration tips**:
+- Configure "Chat Model" in settings (independent from GUI Agent models)
+- Supports any OpenAI-compatible LLM/VLM API
+- Conversation history automatically saved in "Task History"
+
+### 🎭 Mode Comparison
+
+AutoGLM-GUI provides three different agent modes for different scenarios:
+
+#### 1️⃣ Classic Mode
+- **Architecture**: Single `autoglm-phone` vision model (standard Open AutoGLM experience)
+- **Best for**: Simple, clear tasks
+- **Features**: Simple configuration, quick to start
+
+#### 2️⃣ Layered Agent
+- **Architecture**: Agent SDK-based layered task execution system
+  - **Planner layer**: Decision model as high-level intelligence hub for task decomposition and multi-turn reasoning
+  - **Executor layer**: autoglm-phone as executor, only responsible for observation and operation
+- **Best for**: Advanced tasks requiring multi-turn interaction and complex reasoning
+- **Features**: Planner drives executor via tool calls, more transparent process, easier to debug and iterate strategies
+
+#### 3️⃣ Chat Mode
+- **Architecture**: Pure LLM/VLM conversation without device operations
+- **Best for**: Pure conversation, image understanding, text generation
+- **Features**: No ADB required, supports streaming output and thinking mode
+
+**Selection Guide**:
+- 🚀 **Routine tasks (food delivery, ride-hailing)**: Classic mode
+- 🏗️ **Multi-turn reasoning tasks**: Layered Agent mode
+- 💬 **Pure conversation scenarios**: Chat mode
 
 ### Manual Control Mode
 

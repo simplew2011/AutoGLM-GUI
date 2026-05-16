@@ -5,7 +5,7 @@ title: 界面预览
 
 ## 📸 界面预览
 
-快速跳转： [普通模式](/docs/user-guide/ai-modes#mode-classic) · [双模型协作（增强）](/docs/user-guide/ai-modes#mode-dual) · [分层代理（增强）](/docs/user-guide/ai-modes#mode-layered)
+快速跳转： [普通模式](/docs/user-guide/ai-modes#mode-classic) · [双模型协作（增强）](/docs/user-guide/ai-modes#mode-dual) · [分层代理（增强）](/docs/user-guide/ai-modes#mode-layered) · [对话模式](/docs/user-guide/ai-modes#mode-chat)
 
 ### 双模型协作架构
 

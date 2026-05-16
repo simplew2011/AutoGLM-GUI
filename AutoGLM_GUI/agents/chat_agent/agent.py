@@ -113,7 +113,7 @@ class ChatAgent:
                 images=images,
             )
             self._context.append(user_message)
-            
+
             if self.agent_config.verbose:
                 logger.debug(f"[ChatAgent] model_config: {self.model_config}")
 

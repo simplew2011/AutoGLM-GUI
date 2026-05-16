@@ -6,11 +6,16 @@
 - Web frontend lives in `frontend/` (entry: `frontend/src/main.tsx`), desktop packaging lives in `electron/`.
 - Build/lint orchestration scripts are in `scripts/` (`scripts/lint.py`, `scripts/build.py`, `scripts/build_electron.py`).
 - Tests are in `tests/` and `tests/integration/` (example: `tests/test_metrics.py`, `tests/integration/test_agent_integration.py`).
+- Three agent modes are supported:
+  - **Classic mode**: Single vision model (`autoglm-phone`) handles GUI automation tasks
+  - **Layered agent mode**: Planner model + executor model collaborate for complex tasks
+  - **Chat mode**: Pure LLM/VLM conversation without GUI automation (no ADB required)
 
 ## Setup
 - Required Python: `>=3.11` (from `pyproject.toml`).
 - Required Node/pnpm: Node.js `18+` and `pnpm` (from `CONTRIBUTING.md`); CI commonly runs Node `24` (from `.github/workflows/pr-lint.yml`).
 - Required tools: `uv` (dependency sync and task runner), `adb` in PATH (from `CONTRIBUTING.md`).
+  - **Note**: ADB is only required for classic mode and layered agent mode. Chat mode does not require ADB.
 - Install backend dependencies (repo root): `uv sync`
 - Install frontend dependencies: `cd frontend && pnpm install`
 - Optional Electron dependencies (when working on desktop app): `cd electron && pnpm install`
@@ -56,9 +61,9 @@
 - To inspect one task, get its `trace_id` from the task or history response, then filter the JSONL trace file by that value.
 
 ### Trace coverage
-- Model calls: classic agents emit `step.llm`; layered planner streaming emits `model.call` and `layered.planner.*`.
+- Model calls: classic agents emit `step.llm`; layered planner streaming emits `model.call` and `layered.planner.*`; chat mode emits `model.call`.
 - Tool calls: layered planner emits `tool.call` and `tool.result`; Gemini function calling emits `tool.call`.
-- ADB/device calls: device wrappers and low-level ADB operations emit `device.*` and `adb.*` spans.
+- ADB/device calls: device wrappers and low-level ADB operations emit `device.*` and `adb.*` spans (not applicable to chat mode).
 - Memory and persistence: MAI trajectory memory emits `memory.read` and `memory.write`; layered planner SQLite sessions emit `memory.read`, `memory.write`, `memory.delete`, and `memory.clear`; task/history writes emit `task_store.*` and `history.*`.
 - Task summaries: task completion appends a `trace_summary` event and records Prometheus latency metrics from the same trace data.
 
@@ -100,3 +105,42 @@ Recommended minimal verification set:
 - Step 2: implement minimal patch.
 - Step 3: run agreed verification commands.
 - Step 4: report diff + validation results + follow-up options.
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

@@ -7,6 +7,14 @@ If you are a human user, please refer to [README.md](./README.md).
 
 AutoGLM-GUI is a phone agent platform that lets you control Android devices using natural language. You send a text instruction (e.g., "open WeChat and send a message"), and the vision model executes it by interacting with the device screen.
 
+**Three operating modes:**
+
+| Mode | Description | Requires ADB |
+|------|-------------|--------------|
+| **Classic** | Single vision model handles GUI automation | Yes |
+| **Layered Agent** | Planner + executor model collaboration | Yes |
+| **Chat** | Pure LLM/VLM conversation without device control | No |
+
 **Two ways to interact programmatically:**
 
 | Method | Best For | Protocol |
@@ -23,7 +31,8 @@ Before starting, confirm the following with the user:
 - [ ] **Model API access**: The user must provide one of:
   - A third-party API endpoint (e.g., ZhiPu BigModel, ModelScope)
   - A self-hosted model server URL (e.g., vLLM, SGLang)
-- [ ] **Android device**: Connected via USB or WiFi (ADB debugging enabled)
+- [ ] **Android device** (for classic/layered modes): Connected via USB or WiFi (ADB debugging enabled)
+  - **Note**: Chat mode does not require an Android device or ADB
 - [ ] **Python 3.11+** or **uv** installed on the system
 
 > If the user has `uv` installed, you do NOT need Python pre-installed — `uv` will manage Python automatically.
@@ -392,6 +401,142 @@ curl -N -X POST http://127.0.0.1:8000/api/layered-agent/chat \
 | `error` | `message` | Error occurred |
 
 The `session_id` parameter maintains conversation context across multiple calls. Use the same `session_id` for follow-up tasks within the same session.
+
+---
+
+## Chat Mode (Pure Conversation)
+
+Chat mode provides pure LLM/VLM conversation without device control. It's useful for text generation, image understanding, and general Q&A scenarios.
+
+### Key Features
+
+- **No ADB required**: Works without any Android device connection
+- **Multimodal input**: Supports text + image attachments
+- **Streaming output**: Real-time response streaming
+- **Thinking mode**: Supports `<think>...</think>` tags for reasoning
+- **Conversation context**: Maintains multi-turn dialogue history per session
+
+### Configuration
+
+Configure the chat model separately from GUI agent models in the settings:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chat_model_name": "gpt-4o",
+    "chat_enable_thinking": true
+  }'
+```
+
+### Create a Chat Session
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tasks/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "device_id": "chat-session-1",
+    "device_serial": "chat",
+    "mode": "chat"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "session_abc123",
+  "kind": "chat",
+  "mode": "chat",
+  "device_id": "chat-session-1",
+  "device_serial": "chat",
+  "status": "active",
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z"
+}
+```
+
+Save the `id` field — this is your `session_id` for subsequent chat requests.
+
+### Send a Chat Message
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tasks/submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "session_abc123",
+    "message": "Explain quantum computing in simple terms"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "task_xyz789",
+  "session_id": "session_abc123",
+  "status": "pending"
+}
+```
+
+### Stream Chat Response
+
+```bash
+curl -N -X GET "http://127.0.0.1:8000/api/tasks/task_xyz789/stream"
+```
+
+**SSE events:**
+
+| Event | Data Fields | Description |
+|-------|-------------|-------------|
+| `thinking` | `content` | Model's reasoning process (if thinking mode enabled) |
+| `content` | `content` | Actual response content (streamed) |
+| `done` | `content`, `success` | Task completed |
+| `error` | `message` | Error occurred |
+
+### Send Message with Image
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tasks/submit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "session_abc123",
+    "message": "What is in this image?",
+    "attachments": [
+      {
+        "mime_type": "image/png",
+        "data": "iVBORw0KGgoAAAANSUhEUgAA...",
+        "name": "screenshot.png"
+      }
+    ]
+  }'
+```
+
+**Image requirements:**
+- Supported formats: PNG, JPEG, WebP
+- Max size per image: 5 MiB
+- Max total size: 12 MiB
+- Data must be base64-encoded
+
+### Multi-turn Conversation
+
+Use the same `session_id` to maintain conversation context:
+
+```bash
+# First message
+curl -X POST http://127.0.0.1:8000/api/tasks/submit \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "session_abc123", "message": "What is Python?"}'
+
+# Follow-up (context preserved)
+curl -X POST http://127.0.0.1:8000/api/tasks/submit \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "session_abc123", "message": "Show me an example"}'
+```
+
+### Abort Chat Task
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tasks/task_xyz789/abort
+```
 
 ---
 
