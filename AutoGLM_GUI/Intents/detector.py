@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+import re
+from typing import Any, Literal, cast
 
 from AutoGLM_GUI.Intents.types import IntentResult
 from AutoGLM_GUI.logger import logger
@@ -17,6 +18,27 @@ Analyze the user's message and respond with ONLY a JSON object in this exact for
 {"mode": "classic"}
 
 Do not include any other text, explanation, or formatting."""
+
+_VALID_MODES = frozenset({"classic", "layered", "chat"})
+
+
+def _extract_mode(text: str) -> str | None:
+    """Extract mode from text, handling JSON and plain-text responses."""
+    # Try direct JSON parse
+    try:
+        parsed = json.loads(text)
+        mode = str(parsed.get("mode", "")).strip().lower()
+        if mode in _VALID_MODES:
+            return mode
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # Try regex extraction: "classic", "layered", "chat"
+    for mode in ("classic", "layered", "chat"):
+        if re.search(rf'\b{mode}\b', text, re.IGNORECASE):
+            return mode
+
+    return None
 
 
 class IntentDetector:
@@ -51,7 +73,7 @@ class IntentDetector:
                 {"role": "user", "content": message},
             ],
             "temperature": 0.0,
-            "max_tokens": 50,
+            "max_tokens": 200,
         }
 
         async with httpx.AsyncClient(timeout=15) as client:
@@ -64,21 +86,22 @@ class IntentDetector:
                     f"Intent detection API returned status {resp.status_code}"
                 )
             data = resp.json()
-            content = (data["choices"][0]["message"]["content"] or "").strip()
+            msg = data["choices"][0]["message"]
+            content = (msg.get("content") or "").strip()
 
-        try:
-            parsed = json.loads(content)
-            mode = str(parsed.get("mode", "")).strip()
-            if mode not in ("classic", "layered", "chat"):
-                logger.warning(
-                    f"Unexpected intent mode from LLM: {mode!r}, falling back to 'classic'"
-                )
-                mode = "classic"
-            return IntentResult(mode=mode)
-        except (json.JSONDecodeError, KeyError, IndexError) as e:
+        # For thinking models, content may be None/empty — try reasoning fields
+        if not content:
+            content = (msg.get("reasoning_content") or msg.get("reasoning") or "").strip()
+
+        if not content:
+            logger.error("Intent detection returned empty response")
+            raise RuntimeError("Intent detection returned empty response")
+
+        mode = _extract_mode(content)
+        if mode is None:
             logger.warning(
-                f"Failed to parse intent detection response: {e}, content: {content[:200]}"
+                f"Could not extract mode from response: {content[:200]}"
             )
-            raise RuntimeError(
-                f"Failed to parse intent detection response: {e}"
-            ) from e
+            raise RuntimeError("Failed to parse intent detection response")
+
+        return IntentResult(mode=cast(Literal["classic", "layered", "chat"], mode))
