@@ -62,3 +62,4 @@ docs/.docusaurus/
 test-results/
 # Added by code-review-graph
 .code-review-graph/
+.claude/
