@@ -299,6 +299,11 @@ class ConfigResponse(BaseModel):
     chat_api_key: str | None = None
     chat_enable_thinking: bool = True
 
+    # 意图识别模型配置（用于自动模式）
+    intent_base_url: str | None = None
+    intent_model_name: str | None = None
+    intent_api_key: str | None = None
+
     conflicts: list[dict[str, Any]] | None = None  # 配置冲突信息（可选）
 
 
@@ -331,6 +336,11 @@ class ConfigSaveRequest(BaseModel):
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool = True
+
+    # 意图识别模型配置（用于自动模式）
+    intent_base_url: str | None = None
+    intent_model_name: str | None = None
+    intent_api_key: str | None = None
 
     @field_validator("default_max_steps")
     @classmethod
@@ -812,6 +822,27 @@ class HistoryListResponse(BaseModel):
 
 
 # Task Models
+
+
+class IntentDetectRequest(BaseModel):
+    """Intent detection request."""
+
+    message: str
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("message cannot be empty")
+        if len(v) > 10000:
+            raise ValueError("message too long (max 10000 characters)")
+        return v.strip()
+
+
+class IntentDetectResponse(BaseModel):
+    """Intent detection response."""
+
+    mode: str
 
 
 class TaskSessionCreate(BaseModel):

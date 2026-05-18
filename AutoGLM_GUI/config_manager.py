@@ -67,6 +67,9 @@ class ConfigFileData(TypedDict, total=False):
     chat_model_name: str
     chat_api_key: str
     chat_enable_thinking: bool
+    intent_base_url: str
+    intent_model_name: str
+    intent_api_key: str
 
 
 class ConfigModel(BaseModel):
@@ -95,6 +98,11 @@ class ConfigModel(BaseModel):
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool = True
+
+    # 意图识别模型配置（用于自动模式）
+    intent_base_url: str | None = None
+    intent_model_name: str | None = None
+    intent_api_key: str | None = None
 
     @field_validator("default_max_steps")
     @classmethod
@@ -169,6 +177,22 @@ class ConfigModel(BaseModel):
             raise ValueError("chat_model_name cannot be empty string")
         return v.strip() if v else v
 
+    @field_validator("intent_base_url")
+    @classmethod
+    def validate_intent_base_url(cls, v: str | None) -> str | None:
+        if v is not None and v.strip():
+            if not v.startswith(("http://", "https://")):
+                raise ValueError("intent_base_url must start with http:// or https://")
+            return v.rstrip("/")
+        return v
+
+    @field_validator("intent_model_name")
+    @classmethod
+    def validate_intent_model_name(cls, v: str | None) -> str | None:
+        if v is not None and (not v or not v.strip()):
+            raise ValueError("intent_model_name cannot be empty string")
+        return v.strip() if v else v
+
 
 # ==================== 配置层数据类 ====================
 
@@ -195,6 +219,10 @@ class ConfigLayer:
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool | None = None
+    # 意图识别模型配置
+    intent_base_url: str | None = None
+    intent_model_name: str | None = None
+    intent_api_key: str | None = None
 
     source: ConfigSource = ConfigSource.DEFAULT
     explicit_keys: set[str] = field(default_factory=set, repr=False)
@@ -221,6 +249,9 @@ class ConfigLayer:
             "chat_model_name": self.chat_model_name,
             "chat_api_key": self.chat_api_key,
             "chat_enable_thinking": self.chat_enable_thinking,
+            "intent_base_url": self.intent_base_url,
+            "intent_model_name": self.intent_model_name,
+            "intent_api_key": self.intent_api_key,
         }
         return cast(
             ConfigFileData,
@@ -293,6 +324,9 @@ class UnifiedConfigManager:
             chat_model_name=None,
             chat_api_key=None,
             chat_enable_thinking=None,
+            intent_base_url=None,
+            intent_model_name=None,
+            intent_api_key=None,
             source=ConfigSource.DEFAULT,
         )
 
@@ -385,6 +419,10 @@ class UnifiedConfigManager:
                 "on",
             )
 
+        intent_base_url = os.getenv("AUTOGLM_INTENT_BASE_URL")
+        intent_model_name = os.getenv("AUTOGLM_INTENT_MODEL_NAME")
+        intent_api_key = os.getenv("AUTOGLM_INTENT_API_KEY")
+
         default_max_steps_str = os.getenv("AUTOGLM_DEFAULT_MAX_STEPS")
         default_max_steps = None
         if default_max_steps_str:
@@ -414,6 +452,9 @@ class UnifiedConfigManager:
             "chat_model_name": chat_model_name if chat_model_name else None,
             "chat_api_key": chat_api_key if chat_api_key else None,
             "chat_enable_thinking": chat_enable_thinking,
+            "intent_base_url": intent_base_url if intent_base_url else None,
+            "intent_model_name": intent_model_name if intent_model_name else None,
+            "intent_api_key": intent_api_key if intent_api_key else None,
         }
         self._env_layer = ConfigLayer(
             **env_values,
@@ -491,6 +532,9 @@ class UnifiedConfigManager:
                 "chat_model_name": config_data.get("chat_model_name"),
                 "chat_api_key": config_data.get("chat_api_key"),
                 "chat_enable_thinking": config_data.get("chat_enable_thinking"),
+                "intent_base_url": config_data.get("intent_base_url"),
+                "intent_model_name": config_data.get("intent_model_name"),
+                "intent_api_key": config_data.get("intent_api_key"),
             }
             self._file_layer = ConfigLayer(
                 **file_values,
@@ -533,6 +577,9 @@ class UnifiedConfigManager:
         chat_model_name: str | None = None,
         chat_api_key: str | None = None,
         chat_enable_thinking: bool = True,
+        intent_base_url: str | None = None,
+        intent_model_name: str | None = None,
+        intent_api_key: str | None = None,
         merge_mode: bool = True,
         default_max_steps_set: bool = False,
         layered_max_turns_set: bool = False,
@@ -598,6 +645,14 @@ class UnifiedConfigManager:
                 new_config["chat_api_key"] = chat_api_key
             new_config["chat_enable_thinking"] = chat_enable_thinking
 
+            # 意图识别模型配置
+            if intent_base_url is not None:
+                new_config["intent_base_url"] = intent_base_url
+            if intent_model_name is not None:
+                new_config["intent_model_name"] = intent_model_name
+            if intent_api_key is not None:
+                new_config["intent_api_key"] = intent_api_key
+
             # 合并模式：保留现有文件中未提供的字段
             if merge_mode and self._config_path.exists():
                 try:
@@ -618,6 +673,9 @@ class UnifiedConfigManager:
                         "chat_model_name",
                         "chat_api_key",
                         "chat_enable_thinking",
+                        "intent_base_url",
+                        "intent_model_name",
+                        "intent_api_key",
                     ]
                     for key in preserve_keys:
                         if key not in new_config and key in existing:
@@ -713,6 +771,9 @@ class UnifiedConfigManager:
             "chat_model_name",
             "chat_api_key",
             "chat_enable_thinking",
+            "intent_base_url",
+            "intent_model_name",
+            "intent_api_key",
         ]
 
         for key in config_keys:
@@ -880,6 +941,21 @@ class UnifiedConfigManager:
             "1" if config.chat_enable_thinking else "0"
         )
 
+        if config.intent_base_url is not None:
+            os.environ["AUTOGLM_INTENT_BASE_URL"] = config.intent_base_url
+        else:
+            os.environ.pop("AUTOGLM_INTENT_BASE_URL", None)
+
+        if config.intent_model_name is not None:
+            os.environ["AUTOGLM_INTENT_MODEL_NAME"] = config.intent_model_name
+        else:
+            os.environ.pop("AUTOGLM_INTENT_MODEL_NAME", None)
+
+        if config.intent_api_key is not None:
+            os.environ["AUTOGLM_INTENT_API_KEY"] = config.intent_api_key
+        else:
+            os.environ.pop("AUTOGLM_INTENT_API_KEY", None)
+
         logger.debug("Configuration synced to environment variables")
 
     # ==================== 工具方法 ====================
@@ -917,6 +993,9 @@ class UnifiedConfigManager:
                 "chat_model_name": config.chat_model_name,
                 "chat_api_key": config.chat_api_key,
                 "chat_enable_thinking": config.chat_enable_thinking,
+                "intent_base_url": config.intent_base_url,
+                "intent_model_name": config.intent_model_name,
+                "intent_api_key": config.intent_api_key,
             },
         )
 

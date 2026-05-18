@@ -29,6 +29,7 @@ from . import (
     devices,
     health,
     history,
+    intents,
     layered_agent,
     mcp,
     media,
@@ -196,6 +197,7 @@ def create_app() -> FastAPI:
     app.include_router(agents.router)
     app.include_router(health.router)
     app.include_router(history.router)
+    app.include_router(intents.router)
     app.include_router(layered_agent.router)
     app.include_router(devices.router)
     app.include_router(control.router)

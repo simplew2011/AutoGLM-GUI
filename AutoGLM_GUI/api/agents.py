@@ -229,6 +229,9 @@ def get_config_endpoint() -> ConfigResponse:
         chat_model_name=effective_config.chat_model_name,
         chat_api_key=effective_config.chat_api_key,
         chat_enable_thinking=effective_config.chat_enable_thinking,
+        intent_base_url=effective_config.intent_base_url,
+        intent_model_name=effective_config.intent_model_name,
+        intent_api_key=effective_config.intent_api_key,
         conflicts=[
             {
                 "field": c.field,
@@ -280,6 +283,9 @@ def save_config_endpoint(request: ConfigSaveRequest) -> dict[str, Any]:
             chat_model_name=request.chat_model_name,
             chat_api_key=request.chat_api_key,
             chat_enable_thinking=request.chat_enable_thinking,
+            intent_base_url=request.intent_base_url,
+            intent_model_name=request.intent_model_name,
+            intent_api_key=request.intent_api_key,
             merge_mode=True,
             default_max_steps_set="default_max_steps" in provided_fields,
             layered_max_turns_set="layered_max_turns" in provided_fields,
