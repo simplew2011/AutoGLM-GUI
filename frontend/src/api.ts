@@ -684,6 +684,9 @@ export interface ConfigResponse {
   chat_model_name?: string;
   chat_api_key?: string;
   chat_enable_thinking?: boolean;
+  intent_base_url?: string;
+  intent_model_name?: string;
+  intent_api_key?: string;
 }
 
 export interface ConfigSaveRequest {
@@ -704,6 +707,9 @@ export interface ConfigSaveRequest {
   chat_model_name?: string;
   chat_api_key?: string;
   chat_enable_thinking?: boolean;
+  intent_base_url?: string;
+  intent_model_name?: string;
+  intent_api_key?: string;
 }
 
 export interface ConfigSaveResponse {
@@ -730,6 +736,19 @@ export async function deleteConfig(): Promise<{
   message: string;
 }> {
   const res = await axios.delete('/api/config');
+  return res.data;
+}
+
+export interface IntentDetectResponse {
+  mode: 'classic' | 'layered' | 'chat';
+}
+
+export async function detectIntent(
+  message: string
+): Promise<IntentDetectResponse> {
+  const res = await axios.post<IntentDetectResponse>('/api/intents/detect', {
+    message,
+  });
   return res.data;
 }
 

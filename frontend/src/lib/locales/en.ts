@@ -63,6 +63,12 @@ export const en = {
     chatApiKey: 'Chat Model API Key',
     chatModelName: 'Chat Model Name',
     enableThinking: 'Enable Thinking Mode',
+    intentModelTab: 'Intent Model',
+    intentModelHint:
+      'Intent detection model is used for auto mode intent classification. Configure it to enable auto mode.',
+    intentBaseUrl: 'Intent Model Base URL',
+    intentApiKey: 'Intent Model API Key',
+    intentModelName: 'Intent Model Model Name',
   },
   deviceSidebar: {
     devices: 'Devices',
@@ -393,6 +399,16 @@ export const en = {
     chatModeDesc: 'Pure text/image chat, no device operations',
     maiUIModeDesc:
       'Alibaba Cloud MAI-UI model, open-source high-performance GUI Agent',
+    autoMode: 'Auto Mode',
+    autoModeDesc: 'Smart intent recognition, auto-select best execution mode',
+    intentDetected: 'Intent Detection Result',
+    confirmExecute: 'Confirm',
+    switchToClassic: 'Switch to Classic',
+    switchToLayered: 'Switch to Layered',
+    switchToChat: 'Switch to Chat',
+    detecting: 'Detecting intent...',
+    intentNotConfigured:
+      'Intent detection model not configured. Please configure it in settings first.',
   },
   historyPage: {
     title: 'Conversation History',

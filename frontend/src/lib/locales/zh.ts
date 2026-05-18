@@ -62,6 +62,12 @@ export const zh = {
     chatApiKey: '对话模型 API Key',
     chatModelName: '对话模型 Model Name',
     enableThinking: '启用思考模式',
+    intentModelTab: '意图模型',
+    intentModelHint:
+      '意图识别模型用于自动模式中进行意图分类。配置后可启用自动模式。',
+    intentBaseUrl: '意图模型 Base URL',
+    intentApiKey: '意图模型 API Key',
+    intentModelName: '意图模型 Model Name',
   },
   deviceSidebar: {
     devices: '设备',
@@ -384,6 +390,15 @@ export const zh = {
     layeredModeDesc: '规划层分解任务，执行层独立完成子任务',
     chatModeDesc: '纯文本/图片对话，不操作设备',
     maiUIModeDesc: '阿里云 MAI-UI 模型，开源高性能 GUI Agent',
+    autoMode: '自动模式',
+    autoModeDesc: '智能识别意图，自动选择最佳执行模式',
+    intentDetected: '意图识别结果',
+    confirmExecute: '确认执行',
+    switchToClassic: '切换为经典模式',
+    switchToLayered: '切换为分层代理',
+    switchToChat: '切换为对话模式',
+    detecting: '正在识别意图...',
+    intentNotConfigured: '意图识别模型未配置，请先在设置中配置意图模型',
   },
   historyPage: {
     title: '对话历史',

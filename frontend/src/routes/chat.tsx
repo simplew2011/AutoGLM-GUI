@@ -15,6 +15,7 @@ import { DeviceSidebar } from '../components/DeviceSidebar';
 import { DevicePanel } from '../components/DevicePanel';
 import { ChatKitPanel } from '../components/ChatKitPanel';
 import { ChatAgentPanel } from '../components/ChatAgentPanel';
+import { AutoModePanel } from '../components/AutoModePanel';
 import { GroupManageDialog } from '../components/GroupManageDialog';
 import { Toast, type ToastType } from '../components/Toast';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ import {
   Info,
   Smartphone,
   MessageSquare,
+  Bot,
 } from 'lucide-react';
 import { useTranslation } from '../lib/i18n-context';
 import { usePageVisibility } from '../hooks/usePageVisibility';
@@ -177,7 +179,7 @@ function getSelectedDecisionPreset(baseUrl: string) {
 // Search params type for URL persistence
 type ChatSearchParams = {
   serial?: string;
-  mode?: 'classic' | 'chatkit' | 'chat';
+  mode?: 'auto' | 'classic' | 'chatkit' | 'chat';
 };
 
 function areAgentStatesEqual(
@@ -231,7 +233,10 @@ export const Route = createFileRoute('/chat')({
     return {
       serial: typeof search.serial === 'string' ? search.serial : undefined,
       mode:
-        mode === 'classic' || mode === 'chatkit' || mode === 'chat'
+        mode === 'auto' ||
+        mode === 'classic' ||
+        mode === 'chatkit' ||
+        mode === 'chat'
           ? mode
           : undefined,
     };
@@ -247,9 +252,9 @@ function ChatComponent() {
   const [currentDeviceId, setCurrentDeviceId] = useState<string>('');
   // Chat mode: 'classic' for DevicePanel (single model), 'chatkit' for ChatKitPanel (layered agent)
   // Initialize from URL search params if available
-  const [chatMode, setChatMode] = useState<'classic' | 'chatkit' | 'chat'>(
-    searchParams.mode || 'classic'
-  );
+  const [chatMode, setChatMode] = useState<
+    'auto' | 'classic' | 'chatkit' | 'chat'
+  >(searchParams.mode || 'classic');
 
   // Track if we've done initial device selection from URL
   const [initialDeviceSet, setInitialDeviceSet] = useState(false);
@@ -283,6 +288,9 @@ function ChatComponent() {
     chat_model_name: '',
     chat_api_key: '',
     chat_enable_thinking: true,
+    intent_base_url: '',
+    intent_model_name: '',
+    intent_api_key: '',
   });
   const selectedVisionPreset = getSelectedVisionPreset(tempConfig.base_url);
   const selectedDecisionPreset = getSelectedDecisionPreset(
@@ -308,6 +316,9 @@ function ChatComponent() {
           chat_model_name: data.chat_model_name || undefined,
           chat_api_key: data.chat_api_key || undefined,
           chat_enable_thinking: data.chat_enable_thinking ?? undefined,
+          intent_base_url: data.intent_base_url || undefined,
+          intent_model_name: data.intent_model_name || undefined,
+          intent_api_key: data.intent_api_key || undefined,
         });
         // 当后端返回空配置时，使用智谱预设作为默认值
         const useDefault = !data.base_url;
@@ -330,6 +341,9 @@ function ChatComponent() {
           chat_model_name: data.chat_model_name || '',
           chat_api_key: data.chat_api_key || '',
           chat_enable_thinking: data.chat_enable_thinking ?? true,
+          intent_base_url: data.intent_base_url || '',
+          intent_model_name: data.intent_model_name || '',
+          intent_api_key: data.intent_api_key || '',
         });
 
         if (useDefault) {
@@ -510,6 +524,9 @@ function ChatComponent() {
         chat_model_name: tempConfig.chat_model_name || undefined,
         chat_api_key: tempConfig.chat_api_key || undefined,
         chat_enable_thinking: tempConfig.chat_enable_thinking,
+        intent_base_url: tempConfig.intent_base_url || undefined,
+        intent_model_name: tempConfig.intent_model_name || undefined,
+        intent_api_key: tempConfig.intent_api_key || undefined,
       });
 
       setConfig({
@@ -608,7 +625,7 @@ function ChatComponent() {
           </DialogHeader>
 
           <Tabs defaultValue="vision" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
               <TabsTrigger value="vision">
                 <Eye className="w-4 h-4 mr-2" />
                 {t.chat.visionModelTab}
@@ -620,6 +637,10 @@ function ChatComponent() {
               <TabsTrigger value="chat">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 {t.chat.chatModelTab}
+              </TabsTrigger>
+              <TabsTrigger value="intent">
+                <Cpu className="w-4 h-4 mr-2" />
+                {t.chat.intentModelTab}
               </TabsTrigger>
             </TabsList>
 
@@ -1202,6 +1223,83 @@ function ChatComponent() {
                 </Label>
               </div>
             </TabsContent>
+
+            {/* 意图模型 Tab */}
+            <TabsContent
+              value="intent"
+              className="space-y-4 mt-4 overflow-y-auto flex-1 min-h-0"
+            >
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-sm text-amber-900 dark:text-amber-100">
+                <div className="flex items-start gap-2">
+                  <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <div>{t.chat.intentModelHint}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="intent_base_url">{t.chat.intentBaseUrl}</Label>
+                <Input
+                  id="intent_base_url"
+                  value={tempConfig.intent_base_url}
+                  onChange={e =>
+                    setTempConfig({
+                      ...tempConfig,
+                      intent_base_url: e.target.value,
+                    })
+                  }
+                  placeholder="http://localhost:8080/v1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="intent_api_key">{t.chat.intentApiKey}</Label>
+                <div className="relative">
+                  <Input
+                    id="intent_api_key"
+                    type={showApiKey ? 'text' : 'password'}
+                    value={tempConfig.intent_api_key}
+                    onChange={e =>
+                      setTempConfig({
+                        ...tempConfig,
+                        intent_api_key: e.target.value,
+                      })
+                    }
+                    placeholder="sk-..."
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  >
+                    {showApiKey ? (
+                      <EyeOff className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-400" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="intent_model_name">
+                  {t.chat.intentModelName}
+                </Label>
+                <Input
+                  id="intent_model_name"
+                  value={tempConfig.intent_model_name}
+                  onChange={e =>
+                    setTempConfig({
+                      ...tempConfig,
+                      intent_model_name: e.target.value,
+                    })
+                  }
+                  placeholder="Qwen3.6-27B-FP8, deepseek-v4-flash ..."
+                />
+              </div>
+            </TabsContent>
           </Tabs>
 
           <DialogFooter className="sm:justify-between gap-2 flex-shrink-0">
@@ -1226,6 +1324,9 @@ function ChatComponent() {
                     chat_model_name: config.chat_model_name || '',
                     chat_api_key: config.chat_api_key || '',
                     chat_enable_thinking: config.chat_enable_thinking ?? true,
+                    intent_base_url: config.intent_base_url || '',
+                    intent_model_name: config.intent_model_name || '',
+                    intent_api_key: config.intent_api_key || '',
                   });
                 }
               }}
@@ -1258,6 +1359,32 @@ function ChatComponent() {
         {/* Mode Toggle - Floating Capsule */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
           <div className="flex items-center gap-0.5 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm rounded-full p-1 shadow-lg border border-slate-200 dark:border-slate-700">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setChatMode('auto')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    chatMode === 'auto'
+                      ? 'bg-[#1d9bf0] text-white shadow-sm'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Bot className="w-4 h-4" />
+                  {t.chatkit?.autoMode || '自动模式'}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" sideOffset={8} className="max-w-xs">
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    {t.chatkit?.autoMode || '自动模式'}
+                  </p>
+                  <p className="text-xs opacity-80">
+                    {t.chatkit?.autoModeDesc ||
+                      '智能识别意图，自动选择最佳执行模式'}
+                  </p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -1386,6 +1513,13 @@ function ChatComponent() {
                         unlimitedStepsEnabled={
                           config?.default_max_steps === null
                         }
+                      />
+                    </div>
+                  ) : chatMode === 'auto' ? (
+                    <div className="w-full flex items-stretch justify-center">
+                      <AutoModePanel
+                        deviceId={device.id}
+                        deviceSerial={device.serial}
                       />
                     </div>
                   ) : (
