@@ -33,6 +33,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslation } from '../lib/i18n-context';
 import { HistoryItemCard } from './HistoryItemCard';
+import { MarkdownContent } from './MarkdownContent';
 import {
   useChatAgentConversation,
   type ChatConversationMessage,
@@ -623,10 +624,13 @@ export function ChatAgentPanel() {
                       {/* Streaming content */}
                       {message.currentContent && (
                         <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 min-w-0">
-                          <p className="text-sm whitespace-pre-wrap text-slate-700 dark:text-slate-300 break-all overflow-hidden min-w-0">
-                            {message.currentContent}
+                          <div className="text-sm text-slate-700 dark:text-slate-300 min-w-0">
+                            <MarkdownContent
+                              content={message.currentContent}
+                              prose={false}
+                            />
                             <span className="inline-block w-1.5 h-4 ml-0.5 bg-emerald-600 animate-pulse" />
-                          </p>
+                          </div>
                         </div>
                       )}
 
@@ -650,9 +654,10 @@ export function ChatAgentPanel() {
                             }`}
                           />
                           <div className="min-w-0">
-                            <p className="whitespace-pre-wrap break-all overflow-hidden min-w-0">
-                              {message.content}
-                            </p>
+                            <MarkdownContent
+                              content={message.content}
+                              prose={false}
+                            />
                           </div>
                         </div>
                       )}

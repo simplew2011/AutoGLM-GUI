@@ -25,6 +25,17 @@ export function MarkdownContent({
               <table {...props} />
             </div>
           ),
+          a: ({ href, children, ...props }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300"
+              {...props}
+            >
+              {children}
+            </a>
+          ),
           code: ({ ...props }) => {
             const isInline = !props.className?.includes('language-');
             return isInline ? (
