@@ -23,7 +23,6 @@ import {
 } from '../api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import {
   Popover,
@@ -501,13 +500,6 @@ export function ChatAgentPanel() {
             </PopoverContent>
           </Popover>
 
-          {!sessionReady && (
-            <Badge variant="outline" className="text-xs">
-              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              初始化中
-            </Badge>
-          )}
-
           <Button
             variant="ghost"
             size="icon"
@@ -773,11 +765,7 @@ export function ChatAgentPanel() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
             onPaste={handlePaste}
-            placeholder={
-              !sessionReady
-                ? t.devicePanel.configureFirst
-                : t.devicePanel.whatToDo
-            }
+            placeholder={t.devicePanel.whatToDo}
             disabled={loading}
             className="flex-1 min-h-[40px] max-h-[120px] resize-none"
             rows={1}
