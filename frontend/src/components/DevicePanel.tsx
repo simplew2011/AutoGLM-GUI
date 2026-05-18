@@ -48,6 +48,7 @@ import {
   useTaskSessionConversation,
   type TaskConversationMessage,
 } from '../hooks/useTaskSessionConversation';
+import { MarkdownContent } from './MarkdownContent';
 
 interface ActionPayload {
   action?: string;
@@ -993,9 +994,7 @@ export function DevicePanel({
                               }`}
                             />
                             <div>
-                              <p className="whitespace-pre-wrap">
-                                {message.content}
-                              </p>
+                              <MarkdownContent content={message.content} />
                               {message.steps !== undefined && (
                                 <p className="text-xs mt-2 opacity-60 text-slate-500 dark:text-slate-400">
                                   {message.steps} steps completed
@@ -1034,9 +1033,7 @@ export function DevicePanel({
                               </div>
                             )}
                           {message.content && (
-                            <p className="whitespace-pre-wrap">
-                              {message.content}
-                            </p>
+                            <MarkdownContent content={message.content} />
                           )}
                         </div>
                         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 text-right">
