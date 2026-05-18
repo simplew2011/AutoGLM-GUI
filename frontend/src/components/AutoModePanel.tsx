@@ -17,6 +17,7 @@ import {
   submitTaskSessionTask,
   streamTaskEvents,
   cancelTaskRun,
+  getErrorMessage,
   type TaskEventRecordResponse,
 } from '../api';
 import { Button } from '@/components/ui/button';
@@ -154,7 +155,7 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
         );
         streamCloserRef.current = closer.close;
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = getErrorMessage(err);
         setApiError(msg);
         setIsStreaming(false);
         setPhase('input');
@@ -176,7 +177,7 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
       setDetectedMode(result.mode as 'classic' | 'layered' | 'chat');
       setPhase('result');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = getErrorMessage(err);
       if (
         msg.includes('not configured') ||
         msg.includes('503') ||

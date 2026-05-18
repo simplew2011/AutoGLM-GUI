@@ -64,7 +64,7 @@ class IntentDetector:
                     f"Intent detection API returned status {resp.status_code}"
                 )
             data = resp.json()
-            content = data["choices"][0]["message"]["content"].strip()
+            content = (data["choices"][0]["message"]["content"] or "").strip()
 
         try:
             parsed = json.loads(content)
