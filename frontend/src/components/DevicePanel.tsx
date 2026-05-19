@@ -320,12 +320,15 @@ export function DevicePanel({
         });
       }
 
-      // Collect thinking and actions from assistant messages
+      // Collect thinking and actions from assistant messages.
+      // Only include messages with a step field (actual step events),
+      // matching the live view behavior where only step events contribute
+      // to the thinking/actions/screenshots arrays.
       const thinkingList: string[] = [];
       const actionsList: Record<string, unknown>[] = [];
       const screenshotsList: (string | undefined)[] = [];
       selectedRecord.messages
-        .filter(m => m.role === 'assistant')
+        .filter(m => m.role === 'assistant' && m.step != null)
         .forEach(m => {
           if (m.thinking) thinkingList.push(m.thinking);
           if (m.action) actionsList.push(m.action);

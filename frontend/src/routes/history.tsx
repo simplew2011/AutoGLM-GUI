@@ -532,116 +532,125 @@ function HistoryComponent() {
                 {/* Messages */}
                 <div className="space-y-3">
                   {selectedRecord.messages.length > 0 ? (
-                    selectedRecord.messages.map((msg, idx) => (
-                      <div key={idx} className="space-y-2">
-                        {msg.role === 'user' ? (
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                              <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    selectedRecord.messages
+                      .filter(
+                        m =>
+                          m.role === 'user' ||
+                          m.step != null ||
+                          m.action != null ||
+                          (m.content && m.content.trim().length > 0)
+                      )
+                      .map((msg, idx) => (
+                        <div key={idx} className="space-y-2">
+                          {msg.role === 'user' ? (
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                                <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <div className="flex-1 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                <p className="text-sm text-slate-900 dark:text-slate-100">
+                                  {msg.content}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                              <p className="text-sm text-slate-900 dark:text-slate-100">
-                                {msg.content}
-                              </p>
+                          ) : (
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
+                                <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div className="flex-1 space-y-2">
+                                {/* Step header */}
+                                {msg.step !== null &&
+                                  msg.step !== undefined && (
+                                    <div className="space-y-2">
+                                      <button
+                                        className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                        onClick={() =>
+                                          toggleStepExpanded(msg.step as number)
+                                        }
+                                      >
+                                        {expandedSteps.has(msg.step) ? (
+                                          <ChevronDown className="w-3 h-3" />
+                                        ) : (
+                                          <ChevronRight className="w-3 h-3" />
+                                        )}
+                                        {t.historyPage.stepLabel?.replace(
+                                          '{step}',
+                                          String(msg.step)
+                                        ) || `步骤 ${msg.step}`}
+                                      </button>
+
+                                      {expandedSteps.has(msg.step) &&
+                                        getStepTiming(
+                                          selectedRecord,
+                                          msg.step as number
+                                        ) && (
+                                          <div className="flex flex-wrap gap-2">
+                                            {getTimingChips(
+                                              getStepTiming(
+                                                selectedRecord,
+                                                msg.step as number
+                                              ) as StepTimingSummary
+                                            ).map(chip => (
+                                              <Badge
+                                                key={`${msg.step}-${chip.label}`}
+                                                variant="secondary"
+                                                className="font-mono text-[11px]"
+                                              >
+                                                {chip.label} {chip.value}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        )}
+                                    </div>
+                                  )}
+
+                                {/* Thinking */}
+                                {msg.thinking &&
+                                  (msg.step === null ||
+                                    msg.step === undefined ||
+                                    expandedSteps.has(msg.step)) && (
+                                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                                        {t.historyPage.thinkingLabel || '思考'}
+                                      </p>
+                                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                                        {msg.thinking}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                {/* Action */}
+                                {msg.action &&
+                                  (msg.step === null ||
+                                    msg.step === undefined ||
+                                    expandedSteps.has(msg.step)) && (
+                                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">
+                                        {t.historyPage.actionLabel || '动作'}
+                                      </p>
+                                      <pre className="text-xs text-slate-700 dark:text-slate-300 overflow-x-auto">
+                                        {JSON.stringify(msg.action, null, 2)}
+                                      </pre>
+                                    </div>
+                                  )}
+
+                                {/* Assistant text (layered tool results / messages) */}
+                                {msg.content &&
+                                  (msg.step === null ||
+                                    msg.step === undefined ||
+                                    expandedSteps.has(msg.step)) && (
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                      <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                                        {msg.content}
+                                      </p>
+                                    </div>
+                                  )}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
-                              <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            </div>
-                            <div className="flex-1 space-y-2">
-                              {/* Step header */}
-                              {msg.step !== null && msg.step !== undefined && (
-                                <div className="space-y-2">
-                                  <button
-                                    className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                                    onClick={() =>
-                                      toggleStepExpanded(msg.step as number)
-                                    }
-                                  >
-                                    {expandedSteps.has(msg.step) ? (
-                                      <ChevronDown className="w-3 h-3" />
-                                    ) : (
-                                      <ChevronRight className="w-3 h-3" />
-                                    )}
-                                    {t.historyPage.stepLabel?.replace(
-                                      '{step}',
-                                      String(msg.step)
-                                    ) || `步骤 ${msg.step}`}
-                                  </button>
-
-                                  {expandedSteps.has(msg.step) &&
-                                    getStepTiming(
-                                      selectedRecord,
-                                      msg.step as number
-                                    ) && (
-                                      <div className="flex flex-wrap gap-2">
-                                        {getTimingChips(
-                                          getStepTiming(
-                                            selectedRecord,
-                                            msg.step as number
-                                          ) as StepTimingSummary
-                                        ).map(chip => (
-                                          <Badge
-                                            key={`${msg.step}-${chip.label}`}
-                                            variant="secondary"
-                                            className="font-mono text-[11px]"
-                                          >
-                                            {chip.label} {chip.value}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                </div>
-                              )}
-
-                              {/* Thinking */}
-                              {msg.thinking &&
-                                (msg.step === null ||
-                                  msg.step === undefined ||
-                                  expandedSteps.has(msg.step)) && (
-                                  <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                                      {t.historyPage.thinkingLabel || '思考'}
-                                    </p>
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                                      {msg.thinking}
-                                    </p>
-                                  </div>
-                                )}
-
-                              {/* Action */}
-                              {msg.action &&
-                                (msg.step === null ||
-                                  msg.step === undefined ||
-                                  expandedSteps.has(msg.step)) && (
-                                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                                    <p className="text-xs font-medium text-amber-600 dark:text-amber-400 mb-1">
-                                      {t.historyPage.actionLabel || '动作'}
-                                    </p>
-                                    <pre className="text-xs text-slate-700 dark:text-slate-300 overflow-x-auto">
-                                      {JSON.stringify(msg.action, null, 2)}
-                                    </pre>
-                                  </div>
-                                )}
-
-                              {/* Assistant text (layered tool results / messages) */}
-                              {msg.content &&
-                                (msg.step === null ||
-                                  msg.step === undefined ||
-                                  expandedSteps.has(msg.step)) && (
-                                  <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
-                                      {msg.content}
-                                    </p>
-                                  </div>
-                                )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
+                          )}
+                        </div>
+                      ))
                   ) : (
                     <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
                       {t.historyPage.noMessages || '暂无详细消息记录'}
