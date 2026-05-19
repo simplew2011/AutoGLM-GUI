@@ -16,13 +16,23 @@ from AutoGLM_GUI.logger import logger
 from AutoGLM_GUI.model import MessageBuilder
 from AutoGLM_GUI.trace import summarize_text, trace_span
 
-from .action_mapper import tool_call_to_action
+from .action_mapper import InvalidToolCallError, tool_call_to_action
 from .prompts import get_system_prompt
 from .tools import DEVICE_TOOLS
 
 
 class AsyncGeminiAgent(AsyncAgentBase):
     """通用视觉模型 Agent，使用 function calling 而非自定义格式解析。"""
+
+    max_consecutive_invalid_tool_calls = 3
+
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self._consecutive_invalid_tool_calls = 0
+
+    def reset(self) -> None:
+        super().reset()
+        self._consecutive_invalid_tool_calls = 0
 
     def _get_default_system_prompt(self, lang: str) -> str:
         return get_system_prompt(lang)
@@ -41,6 +51,7 @@ class AsyncGeminiAgent(AsyncAgentBase):
         reference_section = (
             f"\n\nUser reference images: {reference_notice}" if reference_notice else ""
         )
+        self._consecutive_invalid_tool_calls = 0
         self._context.append(
             MessageBuilder.create_user_message_with_images(
                 text=f"{task}{reference_section}\n\nCurrent app: {current_app}",
@@ -54,6 +65,7 @@ class AsyncGeminiAgent(AsyncAgentBase):
     async def _execute_step(self) -> AsyncGenerator[dict[str, Any], None]:
         """执行单步：调用 LLM → 解析 tool call → 执行动作。"""
         self._step_count += 1
+        screenshot = None
 
         # 1. 获取截图（非首步）
         if self._step_count > 1:
@@ -111,8 +123,19 @@ class AsyncGeminiAgent(AsyncAgentBase):
                     "model_name": self.model_config.model_name,
                     "message_count": len(self._context),
                 },
-            ):
-                thinking, tool_name, tool_args = await self._call_llm_with_tools()
+            ) as span:
+                (
+                    thinking,
+                    reasoning_content,
+                    tool_name,
+                    tool_args,
+                ) = await self._call_llm_with_tools()
+                span.set_attributes(
+                    {
+                        "thinking_chars": len(thinking),
+                        "reasoning_content_present": bool(reasoning_content),
+                    }
+                )
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -154,15 +177,87 @@ class AsyncGeminiAgent(AsyncAgentBase):
                     ),
                 },
             ) as span:
-                action = tool_call_to_action(tool_name, tool_args)
-                span.set_attribute("action_name", action.get("action"))
+                try:
+                    action = tool_call_to_action(tool_name, tool_args)
+                except InvalidToolCallError as exc:
+                    self._consecutive_invalid_tool_calls += 1
+                    error_message = self._invalid_tool_call_message(exc)
+                    logger.warning(
+                        f"Invalid Gemini tool call on step {self._step_count} "
+                        f"({tool_name}): {error_message}"
+                    )
+                    span.set_attributes(
+                        {
+                            "success": False,
+                            "error_kind": "invalid_arguments",
+                            "error_message": error_message,
+                            "invalid_count": self._consecutive_invalid_tool_calls,
+                        }
+                    )
+                    action = {
+                        "_metadata": "tool_error",
+                        "tool_name": tool_name,
+                        "arguments": tool_args,
+                        "message": error_message,
+                    }
+                else:
+                    self._consecutive_invalid_tool_calls = 0
+                    span.set_attributes(
+                        {"success": True, "action_name": action.get("action")}
+                    )
 
         if self.agent_config.verbose:
             logger.debug(f"🎯 Tool call: {tool_name}({tool_args})")
             logger.debug(f"   Action: {json.dumps(action, ensure_ascii=False)}")
 
+        if action.get("_metadata") == "tool_error":
+            limit_reached = (
+                self._consecutive_invalid_tool_calls
+                >= self.max_consecutive_invalid_tool_calls
+            )
+            error_message = str(action.get("message", "Invalid tool call"))
+            tool_result = {
+                "success": False,
+                "error_code": "invalid_tool_arguments",
+                "message": error_message,
+                "retryable": not limit_reached,
+            }
+            with trace_span(
+                "step.update_context",
+                attrs={"step": self._step_count, "agent_type": self.__class__.__name__},
+            ):
+                self._remove_latest_message_images()
+                self._append_tool_exchange(
+                    thinking=thinking,
+                    reasoning_content=reasoning_content,
+                    tool_name=tool_name,
+                    tool_args=tool_args,
+                    tool_result=tool_result,
+                )
+
+            message = error_message
+            if limit_reached:
+                message = (
+                    "Tool call validation failed "
+                    f"{self._consecutive_invalid_tool_calls} consecutive times: "
+                    f"{error_message}"
+                )
+
+            yield {
+                "type": "step",
+                "data": {
+                    "step": self._step_count,
+                    "thinking": thinking,
+                    "action": action,
+                    "success": False,
+                    "finished": limit_reached,
+                    "message": message,
+                    "screenshot": screenshot.base64_data if screenshot else None,
+                },
+            }
+            return
+
         # 4. 执行 action
-        screenshot = None
         try:
             with trace_span(
                 "step.capture_screenshot",
@@ -197,35 +292,16 @@ class AsyncGeminiAgent(AsyncAgentBase):
             "step.update_context",
             attrs={"step": self._step_count, "agent_type": self.__class__.__name__},
         ):
-            if len(self._context) > 1:
-                self._context[-1] = MessageBuilder.remove_images_from_message(
-                    self._context[-1]
-                )
-
-            self._context.append(
-                {
-                    "role": "assistant",
-                    "content": thinking or "",
-                    "tool_calls": [
-                        {
-                            "id": f"call_{self._step_count}",
-                            "type": "function",
-                            "function": {
-                                "name": tool_name,
-                                "arguments": json.dumps(tool_args),
-                            },
-                        }
-                    ],
-                }
-            )
-            self._context.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": f"call_{self._step_count}",
-                    "content": json.dumps(
-                        {"success": result.success, "message": result.message or "OK"}
-                    ),
-                }
+            self._remove_latest_message_images()
+            self._append_tool_exchange(
+                thinking=thinking,
+                reasoning_content=reasoning_content,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_result={
+                    "success": result.success,
+                    "message": result.message or "OK",
+                },
             )
 
         # 6. 检查完成
@@ -244,8 +320,10 @@ class AsyncGeminiAgent(AsyncAgentBase):
             },
         }
 
-    async def _call_llm_with_tools(self) -> tuple[str, str, dict[str, Any]]:
-        """调用 LLM，返回 (thinking, tool_name, tool_args)。"""
+    async def _call_llm_with_tools(
+        self,
+    ) -> tuple[str, str | None, str, dict[str, Any]]:
+        """调用 LLM，返回 (thinking, reasoning_content, tool_name, tool_args)。"""
         if self._cancel_event.is_set():
             raise asyncio.CancelledError()
 
@@ -261,7 +339,7 @@ class AsyncGeminiAgent(AsyncAgentBase):
         choice = response.choices[0]
         message = choice.message
 
-        thinking = message.content or ""
+        thinking, reasoning_content = self._extract_thinking(message)
 
         if message.tool_calls and len(message.tool_calls) > 0:
             tool_call = message.tool_calls[0]
@@ -275,7 +353,76 @@ class AsyncGeminiAgent(AsyncAgentBase):
                     f"Raw: {tool_call.function.arguments!r}"  # type: ignore[union-attr]
                 )
                 tool_args = {}
-            return thinking, tool_name, tool_args
+            return thinking, reasoning_content, tool_name, tool_args
 
         logger.warning("Model did not return a tool call, treating as finish")
-        return thinking, "finish", {"message": thinking or "No action returned"}
+        return (
+            thinking,
+            reasoning_content,
+            "finish",
+            {"message": thinking or "No action returned"},
+        )
+
+    def _remove_latest_message_images(self) -> None:
+        if len(self._context) > 1:
+            self._context[-1] = MessageBuilder.remove_images_from_message(
+                self._context[-1]
+            )
+
+    def _append_tool_exchange(
+        self,
+        *,
+        thinking: str,
+        reasoning_content: str | None,
+        tool_name: str,
+        tool_args: dict[str, Any],
+        tool_result: dict[str, Any],
+    ) -> None:
+        tool_call_id = f"call_{self._step_count}"
+        assistant_message = {
+            "role": "assistant",
+            "content": thinking or "",
+            "tool_calls": [
+                {
+                    "id": tool_call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": json.dumps(tool_args, ensure_ascii=False),
+                    },
+                }
+            ],
+        }
+        if reasoning_content:
+            assistant_message["reasoning_content"] = reasoning_content
+        self._context.append(assistant_message)
+        self._context.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": json.dumps(tool_result, ensure_ascii=False),
+            }
+        )
+
+    @staticmethod
+    def _invalid_tool_call_message(exc: InvalidToolCallError) -> str:
+        return (
+            f"Invalid tool call for {exc.tool_name}: {exc.message}. "
+            "Return arguments that match the declared tool schema."
+        )
+
+    @classmethod
+    def _extract_thinking(cls, message: Any) -> tuple[str, str | None]:
+        content = cls._message_text_field(message, "content")
+        reasoning_content = cls._message_text_field(
+            message, "reasoning_content"
+        ) or cls._message_text_field(message, "reasoning")
+        return content or reasoning_content, reasoning_content or None
+
+    @staticmethod
+    def _message_text_field(message: Any, field_name: str) -> str:
+        if isinstance(message, dict):
+            value = message.get(field_name)
+        else:
+            value = getattr(message, field_name, None)
+        return value if isinstance(value, str) else ""
