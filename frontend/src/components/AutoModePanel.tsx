@@ -486,17 +486,26 @@ export function AutoModePanel({
             <div className="flex items-center gap-3">
               <Button onClick={handleConfirm} variant="twitter">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                {t.chatkit?.intentConfirm || '确认'}（{countdown}s）
+                {t.chatkit?.intentConfirm || '确认'}
               </Button>
-              <span className="text-xs text-slate-400">
-                {countdown > 0
-                  ? (
-                      t.chatkit?.intentAutoCountdown ||
-                      '{countdown} 秒后自动确认'
-                    ).replace('{countdown}', String(countdown))
-                  : '正在确认...'}
-              </span>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPhase('input');
+                  setApiError(null);
+                }}
+              >
+                <X className="w-4 h-4 mr-2" />
+                取消
+              </Button>
             </div>
+            <p className="text-xs text-slate-400">
+              {countdown > 0
+                ? (
+                    t.chatkit?.intentAutoCountdown || '{countdown} 秒后自动确认'
+                  ).replace('{countdown}', String(countdown))
+                : '正在确认...'}
+            </p>
           </div>
         )}
       </div>
