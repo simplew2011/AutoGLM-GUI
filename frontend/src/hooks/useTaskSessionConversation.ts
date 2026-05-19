@@ -43,6 +43,7 @@ interface UseTaskSessionConversationOptions {
   deviceId: string;
   deviceSerial: string;
   sessionStorageKey: string;
+  mode?: 'classic' | 'layered' | 'chat';
 }
 
 interface UseTaskSessionConversationResult {
@@ -254,6 +255,7 @@ export function useTaskSessionConversation({
   deviceId,
   deviceSerial,
   sessionStorageKey,
+  mode,
 }: UseTaskSessionConversationOptions): UseTaskSessionConversationResult {
   const [messages, setMessages] = useState<TaskConversationMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -423,7 +425,7 @@ export function useTaskSessionConversation({
         }
 
         if (!nextSessionId) {
-          const session = await createTaskSession(deviceId, deviceSerial);
+          const session = await createTaskSession(deviceId, deviceSerial, mode);
           nextSessionId = session.id;
           sessionStorage.setItem(sessionStorageKey, nextSessionId);
         }
@@ -453,7 +455,13 @@ export function useTaskSessionConversation({
         chatStreamRef.current = null;
       }
     };
-  }, [deviceId, deviceSerial, restoreSessionConversation, sessionStorageKey]);
+  }, [
+    deviceId,
+    deviceSerial,
+    restoreSessionConversation,
+    sessionStorageKey,
+    mode,
+  ]);
 
   const sendMessage = useCallback(
     async (input: string, attachments: TaskImageAttachment[] = []) => {

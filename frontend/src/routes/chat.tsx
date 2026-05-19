@@ -258,6 +258,12 @@ function ChatComponent() {
 
   // Track if we've done initial device selection from URL
   const [initialDeviceSet, setInitialDeviceSet] = useState(false);
+  const [autoResetKey, setAutoResetKey] = useState(0);
+  const [autoModeExecuting, setAutoModeExecuting] = useState(false);
+  const [showAutoResetDialog, setShowAutoResetDialog] = useState(false);
+  const [autoResetTargetMode, setAutoResetTargetMode] = useState<
+    'classic' | 'chatkit' | 'chat' | null
+  >(null);
   const [toast, setToast] = useState<{
     message: string;
     type: ToastType;
@@ -1362,7 +1368,14 @@ function ChatComponent() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setChatMode('auto')}
+                  onClick={() => {
+                    if (chatMode === 'auto' && autoModeExecuting) {
+                      setAutoResetTargetMode(null);
+                      setShowAutoResetDialog(true);
+                    } else {
+                      setChatMode('auto');
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     chatMode === 'auto'
                       ? 'bg-[#1d9bf0] text-white shadow-sm'
@@ -1388,7 +1401,14 @@ function ChatComponent() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setChatMode('classic')}
+                  onClick={() => {
+                    if (chatMode === 'auto' && autoModeExecuting) {
+                      setAutoResetTargetMode('classic');
+                      setShowAutoResetDialog(true);
+                    } else {
+                      setChatMode('classic');
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     chatMode === 'classic'
                       ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
@@ -1414,7 +1434,12 @@ function ChatComponent() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {
-                    setChatMode('chatkit');
+                    if (chatMode === 'auto' && autoModeExecuting) {
+                      setAutoResetTargetMode('chatkit');
+                      setShowAutoResetDialog(true);
+                    } else {
+                      setChatMode('chatkit');
+                    }
                   }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     chatMode === 'chatkit'
@@ -1441,7 +1466,14 @@ function ChatComponent() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setChatMode('chat')}
+                  onClick={() => {
+                    if (chatMode === 'auto' && autoModeExecuting) {
+                      setAutoResetTargetMode('chat');
+                      setShowAutoResetDialog(true);
+                    } else {
+                      setChatMode('chat');
+                    }
+                  }}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                     chatMode === 'chat'
                       ? 'bg-emerald-600 text-white shadow-sm'
@@ -1518,8 +1550,18 @@ function ChatComponent() {
                   ) : chatMode === 'auto' ? (
                     <div className="w-full flex items-stretch justify-center">
                       <AutoModePanel
+                        key={`auto-${device.id}`}
                         deviceId={device.id}
                         deviceSerial={device.serial}
+                        resetTrigger={autoResetKey}
+                        onExecutingChange={setAutoModeExecuting}
+                        deviceName={device.model}
+                        deviceConnectionType={device.connection_type}
+                        isConfigured={!!config?.base_url}
+                        isVisible={device.id === currentDeviceId}
+                        unlimitedStepsEnabled={
+                          config?.default_max_steps === null
+                        }
                       />
                     </div>
                   ) : (
@@ -1542,6 +1584,47 @@ function ChatComponent() {
           )}
         </div>
       </div>
+
+      {/* Auto Mode Reset Dialog */}
+      <Dialog open={showAutoResetDialog} onOpenChange={setShowAutoResetDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-[#1d9bf0]" />
+              结束当前任务
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              当前属于【自动模式】分配任务，点击其它模式，需要结束当前任务，确认继续？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAutoResetDialog(false)}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                const serial =
+                  devices.find(d => d.id === currentDeviceId)?.serial || '';
+                sessionStorage.removeItem(`autoglm:classic-session:${serial}`);
+                sessionStorage.removeItem(`layered-task-session:${serial}`);
+                sessionStorage.removeItem('autoglm:chat-session');
+                setAutoResetKey(k => k + 1);
+                setAutoModeExecuting(false);
+                setShowAutoResetDialog(false);
+                if (autoResetTargetMode) {
+                  setChatMode(autoResetTargetMode);
+                }
+              }}
+            >
+              确认结束
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Group Manager Dialog */}
       <GroupManageDialog

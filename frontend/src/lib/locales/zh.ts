@@ -399,6 +399,9 @@ export const zh = {
     switchToChat: '切换为对话模式',
     detecting: '正在识别意图...',
     intentNotConfigured: '意图识别模型未配置，请先在设置中配置意图模型',
+    intentDetectTitle: '用户意图自动识别',
+    intentConfirm: '确认',
+    intentAutoCountdown: '{countdown} 秒后自动确认',
   },
   historyPage: {
     title: '对话历史',

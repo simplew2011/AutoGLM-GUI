@@ -1,167 +1,223 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Send,
   Bot,
-  Sparkles,
-  Layers,
-  MessageSquare,
   Loader2,
-  CheckCircle2,
   AlertCircle,
-  Square,
-  RotateCcw,
+  ImagePlus,
+  X,
+  CheckCircle2,
+  Send,
 } from 'lucide-react';
 import {
   detectIntent,
   createTaskSession,
   submitTaskSessionTask,
-  streamTaskEvents,
-  cancelTaskRun,
   getErrorMessage,
-  type TaskEventRecordResponse,
+  type TaskImageAttachment,
 } from '../api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '../lib/i18n-context';
-import { DeviceMonitor } from './DeviceMonitor';
+import { ImagePreview } from '@/components/ui/image-preview';
+import { DevicePanel } from './DevicePanel';
+import { ChatKitPanel } from './ChatKitPanel';
+import { ChatAgentPanel } from './ChatAgentPanel';
 
 type Phase = 'input' | 'detecting' | 'result' | 'executing';
 
 interface AutoModePanelProps {
   deviceId: string;
   deviceSerial: string;
+  deviceName?: string;
+  deviceConnectionType?: string;
+  isConfigured?: boolean;
+  isVisible?: boolean;
+  unlimitedStepsEnabled?: boolean;
+  resetTrigger?: number;
+  onExecutingChange?: (executing: boolean) => void;
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+const MAX_IMAGE_ATTACHMENTS = 3;
+
+const COUNTDOWN_SECONDS = 5;
+
+function getSessionStorageKey(mode: string, deviceSerial: string): string {
+  switch (mode) {
+    case 'classic':
+      return `autoglm:classic-session:${deviceSerial}`;
+    case 'layered':
+      return `layered-task-session:${deviceSerial}`;
+    case 'chat':
+      return 'autoglm:chat-session';
+    default:
+      return `autoglm:auto-session:${deviceSerial}`;
+  }
 }
 
-export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
+export function AutoModePanel({
+  deviceId,
+  deviceSerial,
+  deviceName = '',
+  deviceConnectionType,
+  isConfigured = false,
+  isVisible = true,
+  unlimitedStepsEnabled = false,
+  resetTrigger,
+  onExecutingChange,
+}: AutoModePanelProps) {
   const t = useTranslation();
   const [phase, setPhase] = useState<Phase>('input');
   const [inputValue, setInputValue] = useState('');
   const [detectedMode, setDetectedMode] = useState<
     'classic' | 'layered' | 'chat'
   >('classic');
+  const [selectedMode, setSelectedMode] = useState<
+    'classic' | 'layered' | 'chat'
+  >('classic');
   const [apiError, setApiError] = useState<string | null>(null);
   const currentMessageRef = useRef('');
 
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [isAborting, setIsAborting] = useState(false);
-  const streamCloserRef = useRef<(() => void) | null>(null);
+  const [attachments, setAttachments] = useState<TaskImageAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Track session info for reset-trigger cancellation
+  const sessionRef = useRef<string | null>(null);
+  const taskRef = useRef<string | null>(null);
+  const cancelTaskRunRef = useRef<((id: string) => Promise<unknown>) | null>(
+    null
+  );
+
+  // Import cancelTaskRun lazily to avoid circular import issues
+  useEffect(() => {
+    import('../api').then(m => {
+      cancelTaskRunRef.current = m.cancelTaskRun;
+    });
+  }, []);
+
+  // Handle reset trigger: cancel current task and go back to input
+  useEffect(() => {
+    if (resetTrigger === undefined || resetTrigger === 0) return;
+
+    const doReset = async () => {
+      if (taskRef.current && cancelTaskRunRef.current) {
+        try {
+          await cancelTaskRunRef.current(taskRef.current);
+        } catch {
+          // ignore
+        }
+      }
+      taskRef.current = null;
+      sessionRef.current = null;
+      setPhase('input');
+      setApiError(null);
+      setInputValue('');
+      setAttachments([]);
+      onExecutingChange?.(false);
+    };
+    void doReset();
+  }, [resetTrigger, onExecutingChange]);
+
+  // Cancel running task on unmount (e.g. user switches to another tab)
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
   useEffect(() => {
     return () => {
-      if (streamCloserRef.current) {
-        streamCloserRef.current();
+      if (
+        phaseRef.current === 'executing' &&
+        taskRef.current &&
+        cancelTaskRunRef.current
+      ) {
+        cancelTaskRunRef.current(taskRef.current).catch(() => {});
       }
     };
   }, []);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      if (attachments.length >= MAX_IMAGE_ATTACHMENTS) break;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const commaIdx = result.indexOf(',');
+        const mime = result.slice(5, result.indexOf(';'));
+        setAttachments(prev => [
+          ...prev,
+          { mime_type: mime, data: result.slice(commaIdx + 1) },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (idx: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of Array.from(items)) {
+      if (attachments.length >= MAX_IMAGE_ATTACHMENTS) break;
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const commaIdx = result.indexOf(',');
+          setAttachments(prev => [
+            ...prev,
+            { mime_type: item.type, data: result.slice(commaIdx + 1) },
+          ]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   const startExecution = useCallback(
     async (mode: 'classic' | 'layered' | 'chat') => {
       const message = currentMessageRef.current;
-      setPhase('executing');
-      setIsStreaming(true);
       setApiError(null);
 
       try {
-        const session = await createTaskSession(deviceId, deviceSerial, mode);
-
-        const task = await submitTaskSessionTask(session.id, message);
-        setCurrentTaskId(task.id);
-
-        setMessages([{ role: 'user', content: message }]);
-
-        let lastContent = '';
-        const closer = streamTaskEvents(
-          task.id,
-          (event: TaskEventRecordResponse) => {
-            if (event.event_type === 'done') {
-              const payload = event.payload as {
-                message?: string;
-                success?: boolean;
-              };
-              if (payload?.message) {
-                setMessages(prev => {
-                  if (
-                    prev.length > 0 &&
-                    prev[prev.length - 1].role === 'assistant'
-                  ) {
-                    const updated = [...prev];
-                    updated[updated.length - 1] = {
-                      role: 'assistant',
-                      content: payload.message || '',
-                    };
-                    return updated;
-                  }
-                  return [
-                    ...prev,
-                    { role: 'assistant', content: payload.message || '' },
-                  ];
-                });
-              }
-              setIsStreaming(false);
-            } else if (event.event_type === 'thinking') {
-              const payload = event.payload as { chunk?: string };
-              if (payload?.chunk) {
-                lastContent += payload.chunk;
-                setMessages(prev => {
-                  if (
-                    prev.length > 0 &&
-                    prev[prev.length - 1].role === 'assistant'
-                  ) {
-                    const updated = [...prev];
-                    updated[updated.length - 1] = {
-                      role: 'assistant',
-                      content: lastContent,
-                    };
-                    return updated;
-                  }
-                  return [...prev, { role: 'assistant', content: lastContent }];
-                });
-              }
-            } else if (
-              event.event_type === 'error' ||
-              event.event_type === 'cancelled'
-            ) {
-              setIsStreaming(false);
-            } else if (event.event_type === 'step') {
-              const payload = event.payload as { message?: string };
-              lastContent = payload?.message || lastContent;
-              setMessages(prev => {
-                if (
-                  prev.length > 0 &&
-                  prev[prev.length - 1].role === 'assistant'
-                ) {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: 'assistant',
-                    content: lastContent,
-                  };
-                  return updated;
-                }
-                return [...prev, { role: 'assistant', content: lastContent }];
-              });
-            }
-          },
-          (errorMsg: string) => {
-            setApiError(errorMsg);
-            setIsStreaming(false);
-          }
+        // Create session with the right mode (use chat device for chat mode)
+        const sessionDeviceId = mode === 'chat' ? '__chat__' : deviceId;
+        const sessionSerial = mode === 'chat' ? 'chat' : deviceSerial;
+        const session = await createTaskSession(
+          sessionDeviceId,
+          sessionSerial,
+          mode
         );
-        streamCloserRef.current = closer.close;
+
+        // Store session ID so the panel can pick it up
+        const key = getSessionStorageKey(mode, sessionSerial);
+        sessionStorage.setItem(key, session.id);
+
+        // Submit the user's message as the first task
+        const task = await submitTaskSessionTask(
+          session.id,
+          message,
+          attachments.length > 0 ? attachments : undefined
+        );
+
+        sessionRef.current = session.id;
+        taskRef.current = task.id;
+
+        // Only switch to execution phase AFTER session is ready
+        setPhase('executing');
+        onExecutingChange?.(true);
       } catch (err: unknown) {
         const msg = getErrorMessage(err);
         setApiError(msg);
-        setIsStreaming(false);
         setPhase('input');
+        onExecutingChange?.(false);
       }
     },
-    [deviceId, deviceSerial]
+    [deviceId, deviceSerial, attachments, onExecutingChange]
   );
 
   const handleSubmit = useCallback(async () => {
@@ -174,7 +230,9 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
 
     try {
       const result = await detectIntent(message);
-      setDetectedMode(result.mode as 'classic' | 'layered' | 'chat');
+      const mode = result.mode as 'classic' | 'layered' | 'chat';
+      setDetectedMode(mode);
+      setSelectedMode(mode);
       setPhase('result');
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
@@ -195,128 +253,94 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
   }, [inputValue, t]);
 
   const handleConfirm = useCallback(() => {
-    startExecution(detectedMode);
-  }, [detectedMode, startExecution]);
+    startExecution(selectedMode || detectedMode);
+  }, [selectedMode, detectedMode, startExecution]);
 
-  const handleSwitchMode = useCallback(
-    (mode: 'classic' | 'layered' | 'chat') => {
-      startExecution(mode);
-    },
-    [startExecution]
-  );
+  // Countdown timer
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
-  const handleReset = useCallback(async () => {
-    if (streamCloserRef.current) {
-      streamCloserRef.current();
-      streamCloserRef.current = null;
-    }
-    if (currentTaskId && isStreaming) {
-      try {
-        await cancelTaskRun(currentTaskId);
-      } catch {
-        // ignore
+  useEffect(() => {
+    if (phase !== 'result') return;
+
+    let seconds = COUNTDOWN_SECONDS;
+    setCountdown(seconds);
+
+    const timer = setInterval(() => {
+      seconds -= 1;
+      setCountdown(seconds);
+      if (seconds <= 0) {
+        clearInterval(timer);
       }
-    }
-    setPhase('input');
-    setCurrentTaskId(null);
-    setMessages([]);
-    setIsStreaming(false);
-    setIsAborting(false);
-    setApiError(null);
-    setInputValue('');
-  }, [currentTaskId, isStreaming]);
+    }, 1000);
 
-  const handleAbort = useCallback(async () => {
-    setIsAborting(true);
-    if (streamCloserRef.current) {
-      streamCloserRef.current();
-      streamCloserRef.current = null;
-    }
-    if (currentTaskId) {
-      try {
-        await cancelTaskRun(currentTaskId);
-      } catch {
-        // ignore
-      }
-    }
-    setIsStreaming(false);
-    setIsAborting(false);
-  }, [currentTaskId]);
+    return () => clearInterval(timer);
+  }, [phase, detectedMode]);
 
+  // Auto-submit when countdown reaches 0
+  useEffect(() => {
+    if (phase === 'result' && countdown === 0) {
+      startExecution(selectedMode || detectedMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countdown]);
+
+  // Execution phase: delegate to the appropriate panel
   if (phase === 'executing') {
-    return (
-      <div className="w-full max-w-7xl flex items-stretch gap-0 justify-center min-h-0 overflow-hidden">
-        <DeviceMonitor deviceId={deviceId} className="rounded-l-xl" />
-        <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-r-xl border border-l-0 border-slate-200 dark:border-slate-700">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    msg.role === 'user'
-                      ? 'bg-[#1d9bf0] text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                </div>
-              </div>
-            ))}
-            {isStreaming &&
-              messages.length > 0 &&
-              messages[messages.length - 1].role === 'assistant' && (
-                <div className="flex justify-start">
-                  <div className="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
-                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                  </div>
-                </div>
-              )}
-            {apiError && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {apiError}
-              </div>
-            )}
-          </div>
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={isStreaming || isAborting}
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset
-            </Button>
-            {isStreaming && (
-              <Button
-                variant="outline"
-                onClick={handleAbort}
-                disabled={isAborting}
-              >
-                <Square className="w-4 h-4 mr-2" />
-                {isAborting ? 'Aborting...' : 'Abort'}
-              </Button>
-            )}
-          </div>
+    const resolvedMode = selectedMode || detectedMode;
+
+    if (resolvedMode === 'chat') {
+      return (
+        <div className="w-full max-w-4xl flex items-stretch justify-center min-h-0">
+          <ChatAgentPanel />
         </div>
+      );
+    }
+
+    if (resolvedMode === 'layered') {
+      return (
+        <div className="w-full flex items-stretch justify-center">
+          <ChatKitPanel
+            deviceId={deviceId}
+            deviceSerial={deviceSerial}
+            deviceName={deviceName}
+            deviceConnectionType={deviceConnectionType}
+            isVisible={isVisible}
+            unlimitedStepsEnabled={unlimitedStepsEnabled}
+          />
+        </div>
+      );
+    }
+
+    // classic mode
+    return (
+      <div className="w-full flex items-stretch justify-center">
+        <DevicePanel
+          deviceId={deviceId}
+          deviceSerial={deviceSerial}
+          deviceName={deviceName}
+          deviceConnectionType={deviceConnectionType}
+          isConfigured={isConfigured}
+          isVisible={isVisible}
+          unlimitedStepsEnabled={unlimitedStepsEnabled}
+        />
       </div>
     );
   }
 
+  // Input / Detecting / Result phases
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-0 p-4">
       <div className="w-full max-w-2xl space-y-4">
         {phase === 'input' && (
           <>
-            <div className="text-center space-y-2">
-              <Bot className="w-12 h-12 text-[#1d9bf0] mx-auto" />
+            <div className="flex flex-col items-center justify-center text-center py-8">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#1d9bf0]/10 mb-6">
+                <Bot className="h-10 w-10 text-[#1d9bf0]" />
+              </div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                 {t.chatkit?.autoMode || '自动模式'}
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md">
                 {t.chatkit?.autoModeDesc ||
                   '智能识别意图，自动选择最佳执行模式'}
               </p>
@@ -329,7 +353,36 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
               </div>
             )}
 
-            <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+
+            {attachments.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {attachments.map((att, idx) => (
+                  <div key={idx} className="relative">
+                    <ImagePreview
+                      src={`data:${att.mime_type};base64,${att.data}`}
+                      alt={`Attachment ${idx + 1}`}
+                      className="h-16 w-16 object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => removeAttachment(idx)}
+                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-600 text-white hover:bg-slate-700"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-end gap-3">
               <Textarea
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
@@ -339,16 +392,31 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
                     handleSubmit();
                   }
                 }}
-                placeholder="Describe what you want to do..."
-                className="pr-12 min-h-[80px] resize-none"
+                onPaste={handlePaste}
+                placeholder={
+                  t.devicePanel?.whatToDo || 'Describe what you want to do...'
+                }
+                className="flex-1 min-h-[40px] max-h-[120px] resize-none"
                 disabled={phase !== 'input'}
+                rows={1}
               />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={attachments.length >= MAX_IMAGE_ATTACHMENTS}
+                className="h-10 w-10 flex-shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImagePlus className="w-4 h-4" />
+              </Button>
+
               <Button
                 size="icon"
                 onClick={handleSubmit}
                 disabled={!inputValue.trim() || phase !== 'input'}
-                className="absolute right-2 bottom-2"
-                variant="twitter"
+                className="h-10 w-10 rounded-full flex-shrink-0 bg-[#1d9bf0] text-white hover:bg-[#1a8cd8]"
               >
                 <Send className="w-4 h-4" />
               </Button>
@@ -357,64 +425,77 @@ export function AutoModePanel({ deviceId, deviceSerial }: AutoModePanelProps) {
         )}
 
         {phase === 'detecting' && (
-          <div className="text-center space-y-4 py-12">
-            <Loader2 className="w-8 h-8 text-[#1d9bf0] mx-auto animate-spin" />
-            <p className="text-slate-500 dark:text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#1d9bf0]/10">
+              <Loader2 className="h-8 w-8 text-[#1d9bf0] animate-spin" />
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               {t.chatkit?.detecting || '正在识别意图...'}
             </p>
           </div>
         )}
 
         {phase === 'result' && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <Bot className="w-8 h-8 text-[#1d9bf0]" />
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t.chatkit?.intentDetected || '意图识别结果'}
-                </p>
-                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                  {detectedMode === 'classic'
-                    ? t.chatkit?.classicMode || '经典模式'
-                    : detectedMode === 'layered'
-                      ? t.chatkit?.layeredMode || '分层代理'
-                      : t.chatkit?.chatMode || '对话模式'}
-                </p>
-              </div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 space-y-5 shadow-lg">
+            <div>
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                {t.chatkit?.intentDetectTitle || '用户意图自动识别'}
+              </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
+              {(['classic', 'layered', 'chat'] as const).map(mode => (
+                <label
+                  key={mode}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedMode === mode
+                      ? 'border-[#1d9bf0] bg-[#1d9bf0]/5'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="intent-mode"
+                    value={mode}
+                    checked={selectedMode === mode}
+                    onChange={() => setSelectedMode(mode)}
+                    className="w-4 h-4 text-[#1d9bf0] focus:ring-[#1d9bf0]"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {mode === 'classic'
+                        ? t.chatkit?.classicMode || '经典模式'
+                        : mode === 'layered'
+                          ? t.chatkit?.layeredMode || '分层代理'
+                          : t.chatkit?.chatMode || '对话模式'}
+                    </span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {mode === 'classic'
+                        ? t.chatkit?.classicModeDesc || '视觉模型直接执行任务'
+                        : mode === 'layered'
+                          ? t.chatkit?.layeredModeDesc ||
+                            '规划层分解任务，执行层独立完成子任务'
+                          : t.chatkit?.chatModeDesc ||
+                            '纯文本/图片对话，不操作设备'}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
               <Button onClick={handleConfirm} variant="twitter">
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                {t.chatkit?.confirmExecute || '确认执行'}
+                {t.chatkit?.intentConfirm || '确认'}（{countdown}s）
               </Button>
-              {detectedMode !== 'classic' && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSwitchMode('classic')}
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  {t.chatkit?.switchToClassic || '切换为经典模式'}
-                </Button>
-              )}
-              {detectedMode !== 'layered' && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSwitchMode('layered')}
-                >
-                  <Layers className="w-4 h-4 mr-2" />
-                  {t.chatkit?.switchToLayered || '切换为分层代理'}
-                </Button>
-              )}
-              {detectedMode !== 'chat' && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleSwitchMode('chat')}
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  {t.chatkit?.switchToChat || '切换为对话模式'}
-                </Button>
-              )}
+              <span className="text-xs text-slate-400">
+                {countdown > 0
+                  ? (
+                      t.chatkit?.intentAutoCountdown ||
+                      '{countdown} 秒后自动确认'
+                    ).replace('{countdown}', String(countdown))
+                  : '正在确认...'}
+              </span>
             </div>
           </div>
         )}

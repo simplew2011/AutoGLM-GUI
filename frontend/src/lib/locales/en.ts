@@ -409,6 +409,9 @@ export const en = {
     detecting: 'Detecting intent...',
     intentNotConfigured:
       'Intent detection model not configured. Please configure it in settings first.',
+    intentDetectTitle: 'Auto Intent Detection',
+    intentConfirm: 'Confirm',
+    intentAutoCountdown: '{countdown}s auto confirm',
   },
   historyPage: {
     title: 'Conversation History',
