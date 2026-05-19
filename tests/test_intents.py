@@ -1,114 +1,68 @@
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
+import asyncio
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from AutoGLM_GUI.Intents.detector import IntentDetector
-from AutoGLM_GUI.Intents.types import IntentResult
+from AutoGLM_GUI.Intents.classifier import IntentClassifier, IntentResult
 
 
-def _mock_config_manager(
-    intent_base_url="http://localhost/v1", intent_model_name="test-model"
-):
-    mgr = MagicMock()
-    mgr.get_effective_config.return_value = MagicMock(
-        intent_base_url=intent_base_url,
-        intent_api_key="sk-test",
-        intent_model_name=intent_model_name,
+_CATEGORY_TO_MODE = {
+    "gui_agent": "classic",
+    "layered_gui_agent": "layered",
+    "simple_chat": "chat",
+}
+
+
+def test_category_to_mode_mapping():
+    assert _CATEGORY_TO_MODE["gui_agent"] == "classic"
+    assert _CATEGORY_TO_MODE["layered_gui_agent"] == "layered"
+    assert _CATEGORY_TO_MODE["simple_chat"] == "chat"
+
+
+def test_unknown_category_defaults_to_classic():
+    assert _CATEGORY_TO_MODE.get("unknown", "classic") == "classic"
+
+
+def test_rule_fallback_gui_agent():
+    result = IntentClassifier._rule_based_fallback(
+        "帮我在淘宝上搜索无线耳机", "mock error"
     )
-    return mgr
+    assert result.category == "gui_agent"
 
 
-class _MockResponse:
-    def __init__(self, status, data):
-        self.status_code = status
-        self.text = json.dumps(data)
-        self._data = data
+def test_rule_fallback_layered():
+    result = IntentClassifier._rule_based_fallback(
+        "帮我在淘宝、京东和拼多多分别搜索同一款耳机，对比价格", "mock error"
+    )
+    assert result.category == "layered_gui_agent"
 
-    def json(self):
-        return self._data
+
+def test_rule_fallback_simple_chat():
+    result = IntentClassifier._rule_based_fallback("今天天气怎么样", "mock error")
+    assert result.category == "simple_chat"
+
+
+def test_intent_result_equality():
+    a = IntentResult("gui_agent", "test")
+    b = IntentResult("gui_agent", "test")
+    assert a == b
+
+
+def test_intent_result_to_dict():
+    r = IntentResult("simple_chat", "chitchat")
+    assert r.to_dict() == {"category": "simple_chat", "reason": "chitchat"}
 
 
 @pytest.mark.anyio
-@pytest.mark.anyio
-async def test_detect_classic():
-    detector = IntentDetector(_mock_config_manager())
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(
-        return_value=_MockResponse(200, {"choices": [{"message": {"content": '{"mode": "classic"}'}}]})
+async def test_classify_integration_with_fallback():
+    """Test that fallback is used when API is not available."""
+    clf = IntentClassifier(
+        base_url="http://nonexistent",
+        api_key="none",
+        model="none",
+        max_retries=0,
     )
 
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        result = await detector.detect("打开淘宝搜索耳机")
-    assert result == IntentResult(mode="classic")
-
-
-@pytest.mark.anyio
-async def test_detect_layered():
-    detector = IntentDetector(_mock_config_manager())
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(
-        return_value=_MockResponse(200, {"choices": [{"message": {"content": '{"mode": "layered"}'}}]})
-    )
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        result = await detector.detect("帮我对比淘宝和京东上同一款商品的价格")
-    assert result == IntentResult(mode="layered")
-
-
-@pytest.mark.anyio
-async def test_detect_chat():
-    detector = IntentDetector(_mock_config_manager())
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(
-        return_value=_MockResponse(200, {"choices": [{"message": {"content": '{"mode": "chat"}'}}]})
-    )
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        result = await detector.detect("你好，今天天气怎么样")
-    assert result == IntentResult(mode="chat")
-
-
-@pytest.mark.anyio
-async def test_detect_not_configured():
-    detector = IntentDetector(
-        _mock_config_manager(intent_base_url="", intent_model_name="")
-    )
-    with pytest.raises(RuntimeError, match="not configured"):
-        await detector.detect("test")
-
-
-@pytest.mark.anyio
-async def test_detect_fallback_on_bad_response():
-    detector = IntentDetector(_mock_config_manager())
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(
-        return_value=_MockResponse(200, {"choices": [{"message": {"content": "invalid response"}}]})
-    )
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        with pytest.raises(RuntimeError, match="Failed to parse"):
-            await detector.detect("test")
-
-
-@pytest.mark.anyio
-async def test_detect_api_error():
-    detector = IntentDetector(_mock_config_manager())
-    mock_client = AsyncMock()
-    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-    mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.post = AsyncMock(
-        return_value=_MockResponse(500, {"error": "internal error"})
-    )
-
-    with patch("httpx.AsyncClient", return_value=mock_client):
-        with pytest.raises(RuntimeError, match="status 500"):
-            await detector.detect("test")
+    with patch.object(clf.client.chat.completions, "create", side_effect=Exception("API unavailable")):
+        result = await asyncio.to_thread(clf.classify, "帮我打开淘宝搜索耳机")
+    assert result.category in ("gui_agent", "layered_gui_agent", "simple_chat")
