@@ -1,4 +1,3 @@
-from AutoGLM_GUI.Intents.types import IntentResult
-from AutoGLM_GUI.Intents.detector import IntentDetector
+from AutoGLM_GUI.Intents.classifier import IntentClassifier, IntentResult
 
-__all__ = ["IntentResult", "IntentDetector"]
+__all__ = ["IntentClassifier", "IntentResult"]

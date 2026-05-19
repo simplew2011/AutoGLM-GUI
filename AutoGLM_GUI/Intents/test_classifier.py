@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from classifier import IntentClassifier, IntentResult
-from utils import extract_json, extract_code_block, parse_few_shot_examples
+from AutoGLM_GUI.Intents.classifier import IntentClassifier, IntentResult
+from AutoGLM_GUI.Intents.utils import extract_json, extract_code_block, parse_few_shot_examples
 
 
 # ========== JSON 提取测试 ==========
@@ -15,21 +15,25 @@ class TestExtractJson:
     def test_plain_json(self):
         raw = '{"category": "gui_agent", "reason": "test"}'
         result = extract_json(raw)
+        assert result is not None
         assert result["category"] == "gui_agent"
 
     def test_json_with_whitespace(self):
         raw = '  \n  {"category": "simple_chat"}  \n  '
         result = extract_json(raw)
+        assert result is not None
         assert result["category"] == "simple_chat"
 
     def test_json_in_markdown_block(self):
         raw = "```json\n{\"category\": \"layered_gui_agent\", \"reason\": \"test\"}\n```"
         result = extract_json(raw)
+        assert result is not None
         assert result["category"] == "layered_gui_agent"
 
     def test_json_in_text(self):
         raw = "分类结果如下：\n{\"category\": \"gui_agent\", \"reason\": \"shopping\"}"
         result = extract_json(raw)
+        assert result is not None
         assert result["category"] == "gui_agent"
 
     def test_invalid_json_returns_none(self):
@@ -222,7 +226,7 @@ class TestClassifierDefaults:
         clf = IntentClassifier()
         assert clf.temperature == 0.0, "temperature should be 0 for deterministic output"
         assert clf.top_p == 0.01, "top_p should be 0.01 for deterministic output"
-        assert clf.max_tokens == 128, "max_tokens should be 128 for short JSON output"
+        assert clf.max_tokens == 2048, "max_tokens should be 2048 for classification"
 
 
 if __name__ == "__main__":
