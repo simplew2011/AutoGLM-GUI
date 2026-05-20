@@ -68,6 +68,10 @@ export const zh = {
     intentBaseUrl: '意图模型 Base URL',
     intentApiKey: '意图模型 API Key',
     intentModelName: '意图模型 Model Name',
+    testConnection: '测试连接',
+    testingConnection: '测试中...',
+    connectionSuccess: '连接成功',
+    connectionFailed: '连接失败',
   },
   deviceSidebar: {
     devices: '设备',

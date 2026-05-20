@@ -5,9 +5,10 @@ import json
 
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from AutoGLM_GUI.schemas import (
     AbortRequest,
@@ -357,3 +358,63 @@ def delete_config_endpoint() -> dict[str, Any]:
 # ✅ 已删除 /api/agents/reinit-all 端点
 # 原因：配置保存时自动销毁所有 Agent（副作用），无需单独的 reinit 端点
 # 见 /api/config POST 端点的实现
+
+
+class ModelConnectionRequest(BaseModel):
+    """服务连通性测试请求."""
+
+    base_url: str
+    model_name: str
+    api_key: str = ""
+
+
+@router.post("/api/config/model-connection-check")
+def model_connection_check(req: ModelConnectionRequest) -> dict[str, Any]:
+    """测试模型服务连通性：检查 base_url 是否可达、模型是否存在."""
+    base = req.base_url.rstrip("/")
+    if not base:
+        return {"success": False, "message": "请先填写 Base URL"}
+    if not req.model_name:
+        return {"success": False, "message": "请先填写模型名称"}
+
+    is_local = any(h in base for h in ("localhost", "127.0.0.1", "0.0.0.0"))
+    api_type = "本地" if is_local else "在线"
+
+    headers: dict[str, str] = {}
+    if req.api_key:
+        headers["Authorization"] = f"Bearer {req.api_key}"
+
+    try:
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(f"{base}/models", headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                ids = [
+                    m.get("id") for m in (data.get("data") or []) if isinstance(m, dict)
+                ]
+                if req.model_name in ids:
+                    return {
+                        "success": True,
+                        "message": f"连接成功 ({api_type})\n{base}\n{req.model_name}",
+                    }
+                if ids:
+                    show = ", ".join(str(id) for id in ids[:10] if id is not None)
+                    more = "" if len(ids) <= 10 else f" ...(+{len(ids) - 10})"
+                    return {
+                        "success": False,
+                        "message": f"连接成功，但未找到模型: {req.model_name}\n可用模型: {show}{more}",
+                    }
+                return {
+                    "success": False,
+                    "message": f"连接成功，但未返回模型列表\n{base}",
+                }
+            return {
+                "success": False,
+                "message": f"请求失败 ({resp.status_code})\n{(resp.text or '')[:120]}",
+            }
+    except httpx.ConnectError:
+        return {"success": False, "message": f"无法连接 {base}"}
+    except httpx.TimeoutException:
+        return {"success": False, "message": "连接超时"}
+    except Exception as e:
+        return {"success": False, "message": str(e)[:60]}

@@ -752,6 +752,27 @@ export async function detectIntent(
   return res.data;
 }
 
+export interface ModelConnectionRequest {
+  base_url: string;
+  model_name: string;
+  api_key?: string;
+}
+
+export interface ModelConnectionResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function modelServiceConnection(
+  req: ModelConnectionRequest
+): Promise<ModelConnectionResponse> {
+  const res = await axios.post<ModelConnectionResponse>(
+    '/api/config/model-connection-check',
+    req
+  );
+  return res.data;
+}
+
 export interface ReinitAllAgentsResponse {
   success: boolean;
   total: number;

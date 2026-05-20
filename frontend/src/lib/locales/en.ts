@@ -69,6 +69,10 @@ export const en = {
     intentBaseUrl: 'Intent Model Base URL',
     intentApiKey: 'Intent Model API Key',
     intentModelName: 'Intent Model Model Name',
+    testConnection: 'Test Connection',
+    testingConnection: 'Testing...',
+    connectionSuccess: 'Connection successful',
+    connectionFailed: 'Connection failed',
   },
   deviceSidebar: {
     devices: 'Devices',
