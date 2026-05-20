@@ -291,6 +291,16 @@ function ChatComponent() {
     success: boolean;
     message: string;
   } | null>(null);
+  const [chatConnectionTesting, setChatConnectionTesting] = useState(false);
+  const [chatConnectionResult, setChatConnectionResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [intentConnectionTesting, setIntentConnectionTesting] = useState(false);
+  const [intentConnectionResult, setIntentConnectionResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const isLoadingDevicesRef = React.useRef(false);
   const [tempConfig, setTempConfig] = useState({
     base_url: VISION_PRESETS[0].config.base_url as string,
@@ -591,16 +601,24 @@ function ChatComponent() {
     baseUrl: string,
     modelName: string,
     apiKey: string,
-    tab: 'vision' | 'decision'
+    tab: 'vision' | 'decision' | 'chat' | 'intent'
   ) => {
     const setTesting =
       tab === 'vision'
         ? setVisionConnectionTesting
-        : setDecisionConnectionTesting;
+        : tab === 'decision'
+          ? setDecisionConnectionTesting
+          : tab === 'chat'
+            ? setChatConnectionTesting
+            : setIntentConnectionTesting;
     const setResult =
       tab === 'vision'
         ? setVisionConnectionResult
-        : setDecisionConnectionResult;
+        : tab === 'decision'
+          ? setDecisionConnectionResult
+          : tab === 'chat'
+            ? setChatConnectionResult
+            : setIntentConnectionResult;
     setTesting(true);
     setResult(null);
     try {
@@ -1370,6 +1388,54 @@ function ChatComponent() {
                   {t.chat.enableThinking}
                 </Label>
               </div>
+
+              {/* 对话模型连通性测试 */}
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    chatConnectionTesting ||
+                    !tempConfig.chat_base_url ||
+                    !tempConfig.chat_model_name
+                  }
+                  onClick={() =>
+                    handleModelConnectionCheck(
+                      tempConfig.chat_base_url,
+                      tempConfig.chat_model_name,
+                      tempConfig.chat_api_key,
+                      'chat'
+                    )
+                  }
+                  className="w-full"
+                >
+                  {chatConnectionTesting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t.chat.testingConnection}
+                    </>
+                  ) : (
+                    t.chat.testConnection
+                  )}
+                </Button>
+                {chatConnectionResult && (
+                  <p
+                    className={`text-xs flex items-center gap-1 ${
+                      chatConnectionResult.success
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-500 dark:text-red-400'
+                    }`}
+                  >
+                    {chatConnectionResult.success ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                    {chatConnectionResult.message}
+                  </p>
+                )}
+              </div>
             </TabsContent>
 
             {/* 意图模型 Tab */}
@@ -1447,6 +1513,54 @@ function ChatComponent() {
                   placeholder="Qwen3.6-27B-FP8, deepseek-v4-flash ..."
                 />
               </div>
+
+              {/* 意图模型连通性测试 */}
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    intentConnectionTesting ||
+                    !tempConfig.intent_base_url ||
+                    !tempConfig.intent_model_name
+                  }
+                  onClick={() =>
+                    handleModelConnectionCheck(
+                      tempConfig.intent_base_url,
+                      tempConfig.intent_model_name,
+                      tempConfig.intent_api_key,
+                      'intent'
+                    )
+                  }
+                  className="w-full"
+                >
+                  {intentConnectionTesting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t.chat.testingConnection}
+                    </>
+                  ) : (
+                    t.chat.testConnection
+                  )}
+                </Button>
+                {intentConnectionResult && (
+                  <p
+                    className={`text-xs flex items-center gap-1 ${
+                      intentConnectionResult.success
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-500 dark:text-red-400'
+                    }`}
+                  >
+                    {intentConnectionResult.success ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                    {intentConnectionResult.message}
+                  </p>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
 
@@ -1457,6 +1571,8 @@ function ChatComponent() {
                 setShowConfig(false);
                 setVisionConnectionResult(null);
                 setDecisionConnectionResult(null);
+                setChatConnectionResult(null);
+                setIntentConnectionResult(null);
                 if (config) {
                   setTempConfig({
                     base_url: config.base_url,
