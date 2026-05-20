@@ -1,15 +1,19 @@
 """Unit tests for intent classifier - JSON extraction, validation, rule fallback."""
 
-import json
 from pathlib import Path
 
 import pytest
 
 from AutoGLM_GUI.Intents.classifier import IntentClassifier, IntentResult
-from AutoGLM_GUI.Intents.utils import extract_json, extract_code_block, parse_few_shot_examples
+from AutoGLM_GUI.Intents.utils import (
+    extract_json,
+    extract_code_block,
+    parse_few_shot_examples,
+)
 
 
 # ========== JSON 提取测试 ==========
+
 
 class TestExtractJson:
     def test_plain_json(self):
@@ -25,13 +29,13 @@ class TestExtractJson:
         assert result["category"] == "simple_chat"
 
     def test_json_in_markdown_block(self):
-        raw = "```json\n{\"category\": \"layered_gui_agent\", \"reason\": \"test\"}\n```"
+        raw = '```json\n{"category": "layered_gui_agent", "reason": "test"}\n```'
         result = extract_json(raw)
         assert result is not None
         assert result["category"] == "layered_gui_agent"
 
     def test_json_in_text(self):
-        raw = "分类结果如下：\n{\"category\": \"gui_agent\", \"reason\": \"shopping\"}"
+        raw = '分类结果如下：\n{"category": "gui_agent", "reason": "shopping"}'
         result = extract_json(raw)
         assert result is not None
         assert result["category"] == "gui_agent"
@@ -45,6 +49,7 @@ class TestExtractJson:
 
 
 # ========== 结果校验测试 ==========
+
 
 class TestValidateResult:
     def setup_method(self):
@@ -67,6 +72,7 @@ class TestValidateResult:
 
 # ========== 规则回退测试 ==========
 
+
 class TestRuleBasedFallback:
     def test_gui_agent_shopping(self):
         result = IntentClassifier._rule_based_fallback(
@@ -88,13 +94,15 @@ class TestRuleBasedFallback:
 
     def test_layered_gui_agent_complex_gui_long_horizon(self):
         result = IntentClassifier._rule_based_fallback(
-            "帮我在小红书、抖音和大众点评分别搜索附近适合约会的餐厅，对比评分和评论后选择一家并导航过去", "mock error"
+            "帮我在小红书、抖音和大众点评分别搜索附近适合约会的餐厅，对比评分和评论后选择一家并导航过去",
+            "mock error",
         )
         assert result.category == "layered_gui_agent"
 
     def test_layered_gui_agent_multi_app_comparison(self):
         result = IntentClassifier._rule_based_fallback(
-            "帮我打开淘宝和京东分别搜索同一款耳机，对比价格、评价和配送时间后选择更合适的下单", "mock error"
+            "帮我打开淘宝和京东分别搜索同一款耳机，对比价格、评价和配送时间后选择更合适的下单",
+            "mock error",
         )
         assert result.category == "layered_gui_agent"
 
@@ -124,19 +132,16 @@ class TestRuleBasedFallback:
         assert "边界模糊" in system or "不确定" in system or "优先" in system
 
     def test_simple_chat_default(self):
-        result = IntentClassifier._rule_based_fallback(
-            "今天天气怎么样", "mock error"
-        )
+        result = IntentClassifier._rule_based_fallback("今天天气怎么样", "mock error")
         assert result.category == "simple_chat"
 
     def test_simple_chat_translation(self):
-        result = IntentClassifier._rule_based_fallback(
-            "翻译这句话为英文", "mock error"
-        )
+        result = IntentClassifier._rule_based_fallback("翻译这句话为英文", "mock error")
         assert result.category == "simple_chat"
 
 
 # ========== IntentResult 对象测试 ==========
+
 
 class TestIntentResult:
     def test_to_dict(self):
@@ -168,6 +173,7 @@ class TestIntentResult:
 
 
 # ========== Prompt 覆盖测试 ==========
+
 
 class TestPromptCoverage:
     """Verify prompt.md contains all required sections and boundary definitions."""
@@ -209,22 +215,32 @@ class TestPromptCoverage:
     def test_all_few_shot_reasons_under_15_chars(self):
         examples = parse_few_shot_examples(self.content)
         for user_input, cat, reason in examples:
-            assert len(reason) <= 15, \
+            assert len(reason) <= 15, (
                 f"Reason '{reason}' for '{user_input}' is {len(reason)} chars, max 15"
+            )
 
     def test_few_shot_has_boundary_cases(self):
         """Verify at least one 'information lookup' boundary case exists."""
         examples = parse_few_shot_examples(self.content)
-        boundaries = [e for e in examples if "查" in e[0] and "百度" in e[0] and e[1] == "simple_chat"]
-        assert len(boundaries) >= 1, "Missing boundary case: using Baidu to search info should be simple_chat"
+        boundaries = [
+            e
+            for e in examples
+            if "查" in e[0] and "百度" in e[0] and e[1] == "simple_chat"
+        ]
+        assert len(boundaries) >= 1, (
+            "Missing boundary case: using Baidu to search info should be simple_chat"
+        )
 
 
 # ========== 默认参数测试 ==========
 
+
 class TestClassifierDefaults:
     def test_deterministic_parameters(self):
         clf = IntentClassifier()
-        assert clf.temperature == 0.0, "temperature should be 0 for deterministic output"
+        assert clf.temperature == 0.0, (
+            "temperature should be 0 for deterministic output"
+        )
         assert clf.top_p == 0.01, "top_p should be 0.01 for deterministic output"
         assert clf.max_tokens == 2048, "max_tokens should be 2048 for classification"
 

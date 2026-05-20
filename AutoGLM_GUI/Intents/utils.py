@@ -24,22 +24,25 @@ def parse_few_shot_examples(content: str) -> list[tuple[str, str, str]]:
     for i, line in enumerate(lines):
         line = line.strip()
         if line.startswith("用户输入:"):
-            user_input = line.split("用户输入:", maxsplit=1)[1].strip().strip('"\'')
+            user_input = line.split("用户输入:", maxsplit=1)[1].strip().strip("\"'")
             # 下一行应该是 JSON 响应
             if i + 1 < len(lines) and lines[i + 1].strip().startswith("{"):
                 try:
                     resp = json.loads(lines[i + 1].strip())
-                    examples.append((
-                        user_input,
-                        resp.get("category", ""),
-                        resp.get("reason", ""),
-                    ))
+                    examples.append(
+                        (
+                            user_input,
+                            resp.get("category", ""),
+                            resp.get("reason", ""),
+                        )
+                    )
                 except json.JSONDecodeError:
                     pass
     return examples
 
 
 _JSON_PATTERN = re.compile(r"\{[^{}]*\}", re.DOTALL)
+
 
 def extract_json(text: str) -> dict[str, Any] | None:
     """Extract a JSON object from LLM response text."""

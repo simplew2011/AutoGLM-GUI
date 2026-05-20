@@ -44,7 +44,9 @@ async def detect_intent(request: IntentDetectRequest) -> IntentDetectResponse:
         mode = _CATEGORY_TO_MODE.get(result.category, "classic")
         logger.info(
             "Intent detected: mode=%s, category=%s, reason=%s",
-            mode, result.category, result.reason,
+            mode,
+            result.category,
+            result.reason,
         )
         return IntentDetectResponse(mode=mode)
     except HTTPException:
