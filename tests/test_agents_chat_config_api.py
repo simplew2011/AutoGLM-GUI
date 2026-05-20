@@ -121,6 +121,13 @@ class FakeConfigManager:
             decision_base_url="http://localhost:9999/v1",
             decision_model_name="planner-model",
             decision_api_key="secret",
+            chat_base_url="",
+            chat_model_name="",
+            chat_api_key="",
+            chat_enable_thinking=True,
+            intent_base_url="",
+            intent_model_name="",
+            intent_api_key="",
         )
         self.source = SimpleNamespace(
             value="config file (~/.config/autoglm/config.json)"

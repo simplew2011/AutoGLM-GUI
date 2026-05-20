@@ -1,5 +1,5 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -63,6 +63,8 @@ async def test_classify_integration_with_fallback():
         max_retries=0,
     )
 
-    with patch.object(clf.client.chat.completions, "create", side_effect=Exception("API unavailable")):
+    with patch.object(
+        clf.client.chat.completions, "create", side_effect=Exception("API unavailable")
+    ):
         result = await asyncio.to_thread(clf.classify, "帮我打开淘宝搜索耳机")
     assert result.category in ("gui_agent", "layered_gui_agent", "simple_chat")
