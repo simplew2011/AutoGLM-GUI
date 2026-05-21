@@ -29,7 +29,7 @@ export const zh = {
     baseUrlRequired: 'Base URL 为必填项',
     baseUrl: 'Base URL',
     apiKey: 'API Key',
-    modelName: '模型名称',
+    modelName: 'Model Name',
     cancel: '取消',
     saveConfig: '保存配置',
     noDevices: '未找到设备',
@@ -53,7 +53,7 @@ export const zh = {
     selectDecisionPreset: '选择决策模型预设',
     decisionBaseUrl: '决策模型 Base URL',
     decisionApiKey: '决策模型 API Key',
-    decisionModelName: '决策模型名称',
+    decisionModelName: '决策 Model Name',
     decisionModelHint:
       '决策模型用于分层代理的规划层。使用分层代理模式时必须配置决策模型。',
     chatModelTab: '对话模型',
