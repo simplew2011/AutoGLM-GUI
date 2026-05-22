@@ -538,7 +538,7 @@ function ChatComponent() {
 
       {/* Config Dialog */}
       <Dialog open={showConfig} onOpenChange={setShowConfig}>
-        <DialogContent className="sm:max-w-md h-[75vh] flex flex-col">
+        <DialogContent className="sm:max-w-xl h-[75vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-[#1d9bf0]" />
