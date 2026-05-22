@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import * as React from 'react';
 import { useState, useEffect } from 'react';
 import {
   connectWifi,
@@ -218,8 +217,6 @@ function ChatComponent() {
     'auto' | 'classic' | 'chatkit' | 'chat'
   >(searchParams.mode || 'classic');
 
-  // Track if we've done initial device selection from URL
-  const [initialDeviceSet, setInitialDeviceSet] = useState(false);
   const [autoResetKey, setAutoResetKey] = useState(0);
   const [autoModeExecuting, setAutoModeExecuting] = useState(false);
   const [showAutoResetDialog, setShowAutoResetDialog] = useState(false);
@@ -261,7 +258,6 @@ function ChatComponent() {
     success: boolean;
     message: string;
   } | null>(null);
-  const isLoadingDevicesRef = React.useRef(false);
   const [tempConfig, setTempConfig] = useState({
     base_url: VISION_PRESETS[0].config.base_url as string,
     model_name: VISION_PRESETS[0].config.model_name as string,
