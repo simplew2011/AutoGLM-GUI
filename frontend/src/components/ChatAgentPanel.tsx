@@ -759,20 +759,10 @@ export function ChatAgentPanel() {
             ))}
           </div>
         )}
-        <div className="flex items-end gap-3">
-          <Textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            onPaste={handlePaste}
-            placeholder={t.devicePanel.whatToDo}
-            disabled={loading}
-            className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-            rows={1}
-          />
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
             disabled={loading || attachments.length >= MAX_IMAGE_ATTACHMENTS}
             className="h-10 w-10 flex-shrink-0"
@@ -780,6 +770,16 @@ export function ChatAgentPanel() {
           >
             <ImagePlus className="w-4 h-4" />
           </Button>
+          <Textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            onPaste={handlePaste}
+            placeholder={t.devicePanel.whatToDo}
+            disabled={loading}
+            className="flex-1 min-h-[48px] max-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent py-2"
+            rows={2}
+          />
           {/* Abort Button - shown when loading */}
           {loading && (
             <Button

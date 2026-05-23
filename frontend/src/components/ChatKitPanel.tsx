@@ -1035,7 +1035,7 @@ export function ChatKitPanel({
 
         {/* Input area */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-end gap-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
             <Textarea
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -1045,8 +1045,8 @@ export function ChatKitPanel({
                 'What would you like to do? (Cmd+Enter to send)'
               }
               disabled={loading}
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none"
-              rows={1}
+              className="flex-1 min-h-[48px] max-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent py-2"
+              rows={2}
             />
             {/* Workflow Quick Run Button */}
             <Tooltip>
@@ -1057,7 +1057,7 @@ export function ChatKitPanel({
                 >
                   <PopoverTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
                       className="h-10 w-10 flex-shrink-0"
                     >
