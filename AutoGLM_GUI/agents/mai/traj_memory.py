@@ -68,18 +68,24 @@ class TrajMemory:
 
     def get_history_images(self, n: int = -1) -> list[bytes]:
         images = [step.screenshot_bytes for step in self.steps if step.screenshot_bytes]
+        if n == 0:
+            return []
         if n > 0:
             return images[-n:]
         return images
 
     def get_history_thoughts(self, n: int = -1) -> list[str]:
         thoughts = [step.thought for step in self.steps if step.thought]
+        if n == 0:
+            return []
         if n > 0:
             return thoughts[-n:]
         return thoughts
 
     def get_history_actions(self, n: int = -1) -> list[dict[str, Any]]:
         actions = [step.action for step in self.steps]
+        if n == 0:
+            return []
         if n > 0:
             return actions[-n:]
         return actions

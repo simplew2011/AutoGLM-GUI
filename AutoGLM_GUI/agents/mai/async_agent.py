@@ -1,7 +1,7 @@
 """AsyncMAIAgent - 异步 MAI Agent，基于 AsyncAgentBase。
 
 核心特性：
-- 多图像历史上下文（保留最近 N 张截图）
+- 多图像历史上下文（保留最近 N 张截图，对齐 MAI-UI 官方实现）
 - XML 格式的思考过程和动作输出
 - 999 坐标系统归一化
 - 自动重试机制
@@ -10,7 +10,7 @@
 
 import asyncio
 import base64
-import json
+import copy
 import traceback
 from collections.abc import AsyncGenerator, Callable
 from io import BytesIO
@@ -23,7 +23,6 @@ from AutoGLM_GUI.agents.base import AsyncAgentBase
 from AutoGLM_GUI.config import AgentConfig, ModelConfig
 from AutoGLM_GUI.device_protocol import DeviceProtocol
 from AutoGLM_GUI.logger import logger
-from AutoGLM_GUI.model import MessageBuilder
 from AutoGLM_GUI.trace import trace_span
 
 from .parser import MAIParseError, MAIParser
@@ -64,6 +63,21 @@ class AsyncMAIAgent(AsyncAgentBase):
     def _get_default_system_prompt(self, lang: str) -> str:
         return MAI_MOBILE_SYSTEM_PROMPT
 
+    def _sanitize_messages_for_log(
+        self, messages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        sanitized = copy.deepcopy(messages)
+        for msg in sanitized:
+            if isinstance(msg.get("content"), list):
+                for item in msg["content"]:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        url = item.get("image_url", {}).get("url", "")
+                        if "base64," in url:
+                            item["image_url"]["url"] = (
+                                url.split("base64,")[0] + "base64_content"
+                            )
+        return sanitized
+
     def _prepare_initial_context(
         self,
         task: str,
@@ -88,11 +102,6 @@ class AsyncMAIAgent(AsyncAgentBase):
                 attrs={"step": self._step_count, "agent_type": self.__class__.__name__},
             ):
                 screenshot = await asyncio.to_thread(self.device.get_screenshot)
-            with trace_span(
-                "step.get_current_app",
-                attrs={"step": self._step_count, "agent_type": self.__class__.__name__},
-            ):
-                current_app = await asyncio.to_thread(self.device.get_current_app)
         except Exception as e:
             logger.error(f"Failed to get device info: {e}")
             yield {"type": "error", "data": {"message": f"Device error: {e}"}}
@@ -115,7 +124,6 @@ class AsyncMAIAgent(AsyncAgentBase):
         ):
             screenshot_bytes = base64.b64decode(screenshot.base64_data)
             pil_image = Image.open(BytesIO(screenshot_bytes))
-            screen_info = MessageBuilder.build_screen_info(current_app)
 
             with trace_span(
                 "memory.read",
@@ -128,7 +136,6 @@ class AsyncMAIAgent(AsyncAgentBase):
             ):
                 messages = self._build_messages(
                     instruction=self.traj_memory.task_goal,
-                    screen_info=screen_info,
                     current_screenshot_base64=screenshot.base64_data,
                 )
 
@@ -180,10 +187,20 @@ class AsyncMAIAgent(AsyncAgentBase):
                         "agent_type": self.__class__.__name__,
                     },
                 ):
+                    if self.agent_config.verbose:
+                        logger.debug(f"raw_content: \n\n {raw_content}\n\n")
+                        logger.debug(f"thinking_parts: \n\n {thinking_parts}\n\n")
+
                     parsed = self.parser.parse_with_thinking(raw_content)
                     thinking = parsed["thinking"]
                     raw_action = parsed["raw_action"]
                     converted_action = parsed["converted_action"]
+
+                if self.agent_config.verbose:
+                    logger.debug(f"parsed_thinking: \n\n{thinking}\n\n")
+                    logger.debug(f"action_str: \n\n{raw_action}\n\n")
+                    logger.debug(f"action: \n\n{converted_action}\n\n")
+
                 break
 
             except asyncio.CancelledError:
@@ -336,6 +353,10 @@ class AsyncMAIAgent(AsyncAgentBase):
         action_markers = ["</thinking>", "<tool_call>"]
         in_action_phase = False
 
+        logger.info("================================================")
+        logger.info(f"messages: {self._sanitize_messages_for_log(messages)}")
+        logger.info("================================================")
+
         try:
             async for chunk in stream:
                 if self._cancel_event.is_set():
@@ -384,43 +405,111 @@ class AsyncMAIAgent(AsyncAgentBase):
             await stream.close()
 
     def _build_messages(
-        self, instruction: str, screen_info: str, current_screenshot_base64: str
+        self, instruction: str, current_screenshot_base64: str
     ) -> list[dict[str, Any]]:
-        """构建包含多图历史上下文的完整消息列表。"""
+        """Build multi-image context messages aligned with MAI-UI official format.
+
+        Message structure (with 2-step history, history_n=3):
+        [
+          system: pure string,
+          user: [{"type": "text", "text": instruction}],
+          user: [{"type": "image_url", ...}],   # step 0 screenshot (input)
+          assistant: pure string,               # step 0 raw model output
+          user: [{"type": "image_url", ...}],   # step 1 screenshot (input)
+          assistant: pure string,               # step 1 raw model output
+          user: [{"type": "image_url", ...}],   # current screenshot
+        ]
+
+        Key format requirements (strictly aligned with MAI-UI official):
+        - system.content is a pure string, NOT a list
+        - assistant.content is a pure string (raw model output), NOT a list
+        - user.content is a list of content blocks (text and/or image_url)
+        - user(text:task) and user(image:screenshot) are separate messages
+        """
         system_prompt = self.agent_config.system_prompt or MAI_MOBILE_SYSTEM_PROMPT
 
         messages: list[dict[str, Any]] = [
-            MessageBuilder.create_system_message(system_prompt),
-            MessageBuilder.create_user_message(f"{instruction}\n\n{screen_info}"),
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": instruction}],
+            },
         ]
 
-        history_images = self.traj_memory.get_history_images(self._history_n - 1)
-        history_thoughts = self.traj_memory.get_history_thoughts(self._history_n - 1)
-        history_actions = self.traj_memory.get_history_actions(self._history_n - 1)
+        steps = self.traj_memory.steps
+        if steps:
+            for step in steps:
+                # Include the screenshot that was shown to the model for this step
+                if step.screenshot_bytes:
+                    img_base64 = base64.b64encode(step.screenshot_bytes).decode("utf-8")
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/png;base64,{img_base64}"
+                                    },
+                                }
+                            ],
+                        }
+                    )
 
-        for img_bytes, thought, action in zip(
-            history_images, history_thoughts, history_actions
-        ):
-            img_base64 = base64.b64encode(img_bytes).decode("utf-8")
-            messages.append(
-                MessageBuilder.create_user_message(
-                    text=screen_info, image_base64=img_base64
-                )
-            )
-
-            tool_call_dict = {"name": "mobile_use", "arguments": action}
-            tool_call_json = json.dumps(tool_call_dict, separators=(",", ":"))
-            assistant_content = (
-                f"<thinking>\n{thought}\n</thinking>\n"
-                f"<tool_call>\n{tool_call_json}\n</tool_call>"
-            )
-            messages.append(MessageBuilder.create_assistant_message(assistant_content))
+                # Use raw model output directly as assistant response.
+                # This avoids precision loss from round-tripping parsed
+                # [0,1] coordinates back to 999-scale, and preserves the
+                # exact format the model itself produced.
+                if step.prediction:
+                    messages.append({"role": "assistant", "content": step.prediction})
 
         messages.append(
-            MessageBuilder.create_user_message(
-                text=screen_info, image_base64=current_screenshot_base64
-            )
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{current_screenshot_base64}"
+                        },
+                    }
+                ],
+            }
         )
+
+        # Retain at most history_n images (including current screenshot)
+        messages = self._limit_images(messages)
+
+        return messages
+
+    def _limit_images(
+        self, messages: list[dict[str, Any]], max_images: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Limit the number of image-bearing user messages in context.
+
+        MAI-UI recommends retaining at most 3 recent screenshots (history_n).
+        Only user(image) messages are removed; corresponding assistant
+        messages are kept as textual history for the model.
+        """
+        if max_images is None:
+            max_images = self._history_n
+
+        image_indices: list[int] = []
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "system":
+                continue
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        image_indices.append(i)
+                        break
+
+        if len(image_indices) > max_images:
+            indices_to_remove = set(image_indices[:-max_images])
+            messages = [
+                msg for i, msg in enumerate(messages) if i not in indices_to_remove
+            ]
 
         return messages
 
