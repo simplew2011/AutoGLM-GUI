@@ -38,28 +38,70 @@ class MAIParser:
 
         if "</think>" in text and "</thinking>" not in text:
             text = text.replace("</think>", "</thinking>")
-            text = "<thinking>" + text
+            if "<thinking>" not in text:
+                text = "<thinking>" + text
 
-        pattern = r"<thinking>(.*?)</thinking>.*?<tool_call>(.*?)</tool_call>"
-        match = re.search(pattern, text, re.DOTALL)
+        thinking = ""
 
-        if not match:
-            raise MAIParseError("Failed to find <thinking> and <tool_call> tags")
+        if "<tool_call>" in text and "<thinking>" in text:
+            thinking_match = re.search(r"<thinking>(.*?)</thinking>", text, re.DOTALL)
+            if thinking_match:
+                thinking_content = thinking_match.group(1).strip()
+                if "<tool_call>" in thinking_content:
+                    inner_thinking_match = re.search(
+                        r"<tool_call>(.*?)(?:</thinking>|$)",
+                        thinking_content,
+                        re.DOTALL,
+                    )
+                    if inner_thinking_match:
+                        raw_thinking = inner_thinking_match.group(1).strip()
+                        raw_thinking = (
+                            raw_thinking.replace("```html", "")
+                            .replace("```", "")
+                            .strip()
+                        )
+                        raw_thinking = raw_thinking.split("answer>")[0].strip()
+                        thinking = raw_thinking
+                    else:
+                        thinking = re.sub(
+                            r"<tool_call>|</tool_call>", "", thinking_content
+                        ).strip()
+                else:
+                    thinking = thinking_content
+        else:
+            thinking_match = re.search(r"<thinking>(.*?)</thinking>", text, re.DOTALL)
+            if thinking_match:
+                thinking = thinking_match.group(1).strip()
 
-        thinking = match.group(1).strip().strip('"')
-        tool_call_str = match.group(2).strip().strip('"')
+        if thinking:
+            thinking = thinking.replace("```html", "").replace("```", "").strip()
+
+        tool_call_match = re.search(
+            r"<tool_call>\s*(.*?)(?:</tool_call>|$)", text, re.DOTALL
+        )
+        action_str = ""
+        if tool_call_match:
+            action_str = tool_call_match.group(1).strip()
+            action_str = action_str.replace("\\n", "").strip()
+            action_str = re.sub(r"</?tool_call[^>]*$", "", action_str).strip()
+        else:
+            json_match = re.search(r'\{[^{}]*"action"\s*:\s*"[^"]+"\s*[^{}]*\}', text)
+            if json_match:
+                action_str = json_match.group()
+
+        if not action_str:
+            raise MAIParseError("Failed to find valid action in response")
 
         try:
-            tool_call = json.loads(tool_call_str)
+            tool_call = json.loads(action_str)
         except json.JSONDecodeError as e:
             raise MAIParseError(f"Invalid JSON in tool_call: {e}") from e
 
         mai_action = tool_call.get("arguments", {})
 
-        if "coordinate" in mai_action:
-            mai_action["coordinate"] = self._normalize_coordinate_to_0_1(
-                mai_action["coordinate"]
-            )
+        for key in ("coordinate", "start_coordinate", "end_coordinate"):
+            if key in mai_action:
+                mai_action[key] = self._normalize_coordinate_to_0_1(mai_action[key])
 
         return {
             "thinking": thinking,
@@ -115,6 +157,11 @@ class MAIParser:
             raise ValueError(f"Invalid JSON in tool_call: {e}") from e
 
         mai_action = tool_call.get("arguments", {})
+
+        for key in ("coordinate", "start_coordinate", "end_coordinate"):
+            if key in mai_action:
+                mai_action[key] = self._normalize_coordinate_to_0_1(mai_action[key])
+
         return self._convert_action(mai_action)
 
     def _convert_action(self, mai_action: dict[str, Any]) -> dict[str, Any]:
@@ -200,12 +247,12 @@ class MAIParser:
             end_coord = mai_action.get("end_coordinate", [0, 0])
 
             start = [
-                self._convert_coordinate_from_scale_factor(start_coord[0]),
-                self._convert_coordinate_from_scale_factor(start_coord[1]),
+                self._convert_coordinate(start_coord[0]),
+                self._convert_coordinate(start_coord[1]),
             ]
             end = [
-                self._convert_coordinate_from_scale_factor(end_coord[0]),
-                self._convert_coordinate_from_scale_factor(end_coord[1]),
+                self._convert_coordinate(end_coord[0]),
+                self._convert_coordinate(end_coord[1]),
             ]
             return {
                 "_metadata": "do",
@@ -225,7 +272,7 @@ class MAIParser:
             return {
                 "_metadata": "do",
                 "action": "Launch",
-                "app": mai_action.get("app", ""),
+                "app": mai_action.get("app") or mai_action.get("text", ""),
             }
 
         raise ValueError(f"Unknown MAI action type: {action_type}")
