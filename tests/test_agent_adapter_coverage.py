@@ -515,8 +515,8 @@ def test_mai_agent_execute_step_success_action_failure_and_reset(
     assert failed_action[-1]["data"]["finished"] is True
     assert failed_action[-1]["data"]["success"] is False
 
-    messages = agent._build_messages("task", "screen", PNG_1X1_BASE64)
-    assert len(messages) == 5
+    messages = agent._build_messages("task", PNG_1X1_BASE64)
+    assert len(messages) == 6
     agent.reset()
     assert len(agent.traj_memory) == 0
 

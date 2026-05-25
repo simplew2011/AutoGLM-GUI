@@ -112,15 +112,15 @@ def _tool_call(arguments: dict[str, object]) -> str:
     ("arguments", "expected"),
     [
         (
-            {"action": "click", "coordinate": [0.25, 0.75]},
+            {"action": "click", "coordinate": [250, 750]},
             {"_metadata": "do", "action": "Tap", "element": [250, 750]},
         ),
         (
-            {"action": "long_press", "coordinate": [0.1, 0.2]},
+            {"action": "long_press", "coordinate": [100, 200]},
             {"_metadata": "do", "action": "Long Press", "element": [100, 200]},
         ),
         (
-            {"action": "double_click", "coordinate": [0.9, 0.8]},
+            {"action": "double_click", "coordinate": [900, 800]},
             {"_metadata": "do", "action": "Double Tap", "element": [900, 800]},
         ),
         (
@@ -178,7 +178,7 @@ def test_mai_parser_swipe_directions(
 ) -> None:
     assert MAIParser().parse(
         _tool_call(
-            {"action": "swipe", "direction": direction, "coordinate": [0.5, 0.5]}
+            {"action": "swipe", "direction": direction, "coordinate": [500, 500]}
         )
     ) == {"_metadata": "do", "action": "Swipe", "start": start, "end": end}
 
