@@ -12,7 +12,7 @@ from AutoGLM_GUI.Intents.prompt import PROMPT_CONTENT
 from AutoGLM_GUI.Intents.utils import (
     extract_json,
     extract_code_block,
-    parse_few_shot_examples
+    parse_few_shot_examples,
 )
 
 logger = logging.getLogger(__name__)
