@@ -1,3 +1,4 @@
+PROMPT_CONTENT = """
 # 用户意图分类提示词设计
 
 ## 系统提示词 (System Prompt)
@@ -132,3 +133,4 @@ simple_chat 判断关键：用户只是**想知道某个信息**（天气、百�
 用户输入: "帮我搜索一下最近AI领域的新闻"
 {"category": "simple_chat", "reason": "非手机控制需求"}
 ```
+"""

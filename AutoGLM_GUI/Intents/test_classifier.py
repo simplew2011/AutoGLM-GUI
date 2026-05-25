@@ -1,10 +1,9 @@
 """Unit tests for intent classifier - JSON extraction, validation, rule fallback."""
 
-from pathlib import Path
-
 import pytest
 
 from AutoGLM_GUI.Intents.classifier import IntentClassifier, IntentResult
+from AutoGLM_GUI.Intents.prompt import PROMPT_CONTENT
 from AutoGLM_GUI.Intents.utils import (
     extract_json,
     extract_code_block,
@@ -125,7 +124,7 @@ class TestRuleBasedFallback:
         assert result.category == "gui_agent"
 
     def test_prompt_defines_layered_gui_agent_as_complex_gui_agent(self):
-        content = (Path(__file__).parent / "prompt.md").read_text(encoding="utf-8")
+        content = PROMPT_CONTENT
         system = extract_code_block(content, "## 系统提示词")
         assert "复杂的手机控制需求" in system
         assert "多应用" in system
@@ -178,10 +177,8 @@ class TestIntentResult:
 class TestPromptCoverage:
     """Verify prompt.md contains all required sections and boundary definitions."""
 
-    PROMPT_PATH = Path(__file__).parent / "prompt.md"
-
     def setup_method(self):
-        self.content = self.PROMPT_PATH.read_text(encoding="utf-8")
+        self.content = PROMPT_CONTENT
 
     def test_has_system_prompt_section(self):
         assert "## 系统提示词" in self.content

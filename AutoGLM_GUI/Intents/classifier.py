@@ -3,28 +3,27 @@
 import json
 import logging
 import argparse
-from pathlib import Path
 from typing import Any, Literal, cast
 
 from openai import OpenAI
 from typing_extensions import get_args
 
-try:
-    from .utils import extract_code_block, parse_few_shot_examples, extract_json
-except ImportError:
-    from utils import extract_code_block, parse_few_shot_examples, extract_json
+from AutoGLM_GUI.Intents.prompt import PROMPT_CONTENT
+from AutoGLM_GUI.Intents.utils import (
+    extract_json,
+    extract_code_block,
+    parse_few_shot_examples
+)
 
 logger = logging.getLogger(__name__)
 
-PROMPT_MD = Path(__file__).parent / "prompt.md"
-PROMPT_CONTENT = PROMPT_MD.read_text(encoding="utf-8")
+PROMPT_CONTENT = PROMPT_CONTENT
 SYSTEM_PROMPT = extract_code_block(PROMPT_CONTENT, "## 系统提示词")
 FEW_SHOT_EXAMPLES = parse_few_shot_examples(PROMPT_CONTENT)
 INTENT_CATEGORY = Literal["gui_agent", "simple_chat", "layered_gui_agent"]
 
 logger.info(
-    "prompt loaded from %s: system=%d chars, few_shot=%d examples",
-    PROMPT_MD.name,
+    "prompt loaded: system=%d chars, few_shot=%d examples",
     len(SYSTEM_PROMPT),
     len(FEW_SHOT_EXAMPLES),
 )
