@@ -282,6 +282,36 @@ def _create_qwen_agent(
 register_agent("qwen", _create_qwen_agent)
 
 
+def _create_mobizen_agent(
+    model_config: ModelConfig,
+    agent_config: AgentConfig,
+    agent_specific_config: AgentSpecificConfig,  # noqa: ARG001
+    device: DeviceProtocol,
+    takeover_callback: Callable[..., Any] | None = None,
+    confirmation_callback: Callable[..., Any] | None = None,
+) -> AsyncAgent:
+    """Create AsyncMobiZenAgent instance.
+
+    Uses MobiZen-GUI tool_call XML format:
+    - <tools> XML block with mobile_use function definition
+    - Thought/Action/<tool_call> output format
+    - 999x999 virtual coordinate system
+    - Stateless per-step message building with history compression
+    """
+    from .mobizen.async_agent import AsyncMobiZenAgent
+
+    return AsyncMobiZenAgent(  # type: ignore[return-value]
+        model_config=model_config,
+        agent_config=agent_config,
+        device=device,
+        confirmation_callback=confirmation_callback,
+        takeover_callback=takeover_callback,
+    )
+
+
+register_agent("mobizen", _create_mobizen_agent)
+
+
 def _create_chat_agent(
     model_config: ModelConfig,
     agent_config: AgentConfig,

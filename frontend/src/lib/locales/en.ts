@@ -90,6 +90,8 @@ export const en = {
     agentMidsceneDesc:
       'Midscene.js vision-driven, requires Node.js environment',
     agentQwenDesc: 'Adapted for Qwen3.6 series',
+    agentMobizenDesc:
+      'Based on MobiZen model, uses tool_call format for GUI automation',
   },
   deviceSidebar: {
     devices: 'Devices',

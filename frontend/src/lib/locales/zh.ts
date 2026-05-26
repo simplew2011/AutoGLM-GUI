@@ -84,6 +84,7 @@ export const zh = {
     agentDroidrunDesc: '基于 DroidRun 框架，需安装 Portal APK',
     agentMidsceneDesc: '基于 Midscene.js 视觉驱动，需要 Node.js 环境',
     agentQwenDesc: 'Qwen3.6系列适配',
+    agentMobizenDesc: '基于MobiZen模型，使用tool_call格式进行GUI自动化操作',
   },
   deviceSidebar: {
     devices: '设备',

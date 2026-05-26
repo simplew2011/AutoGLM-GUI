@@ -50,6 +50,7 @@ import {
   MessageSquare,
   Bot,
   Loader2,
+  Zap,
 } from 'lucide-react';
 import { useTranslation } from '../lib/i18n-context';
 import { useDevices } from '../lib/device-context';
@@ -127,6 +128,13 @@ const AGENT_PRESETS = [
     displayName: 'Qwen Agent',
     descriptionKey: 'agentQwenDesc',
     icon: Layers,
+    defaultConfig: {},
+  },
+  {
+    name: 'mobizen',
+    displayName: 'MobiZen Agent',
+    descriptionKey: 'agentMobizenDesc',
+    icon: Zap,
     defaultConfig: {},
   },
 ] as const;
