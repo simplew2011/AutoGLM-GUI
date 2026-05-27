@@ -1,8 +1,10 @@
 """AsyncMobiZenAgent — MobiZen-GUI model agent with tool_call parsing.
 
 Inherits from AsyncAgentBase for streaming, cancellation, and watchdog support.
-Uses the MobiZen system prompt (XML <tools> + <tool_call> format) and parses
-model output with Thought/Action/<tool_call> JSON structure.
+Uses the MobiZen system prompt and stateless per-step message format:
+every API request consists of exactly 2 messages (system + user), with
+step history compressed into a text summary inside the user message.
+This matches the original MobiZen-GUI QwenMessageBuilder.build_messages().
 """
 
 from __future__ import annotations
@@ -19,17 +21,11 @@ from AutoGLM_GUI.agents.protocols import AsyncAgent
 from AutoGLM_GUI.config import AgentConfig, ModelConfig
 from AutoGLM_GUI.device_protocol import DeviceProtocol
 from AutoGLM_GUI.logger import logger
-from AutoGLM_GUI.model import MessageBuilder
 from AutoGLM_GUI.prompt_config import get_messages
 from AutoGLM_GUI.trace import trace_span
 
 from .parser import MobiZenParser
 from .prompts import MOBIZEN_SYSTEM_PROMPT
-
-
-def get_system_prompt(lang: str = "cn") -> str:
-    """Get the MobiZen system prompt (language-agnostic for now)."""
-    return MOBIZEN_SYSTEM_PROMPT
 
 
 def _count_image_parts(messages: list[dict[str, Any]]) -> int:
@@ -46,7 +42,13 @@ def _count_image_parts(messages: list[dict[str, Any]]) -> int:
 
 
 class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
-    """Async MobiZen-GUI agent using tool_call XML format."""
+    """Async MobiZen-GUI agent using stateless tool_call XML format.
+
+    Each step sends a fresh [system, user] message pair. Step history is
+    compressed into a text string inside the user message, matching the
+    original MobiZen-GUI implementation. The model never sees its own
+    previous outputs (no assistant messages in the conversation context).
+    """
 
     def __init__(
         self,
@@ -64,11 +66,11 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             confirmation_callback=confirmation_callback,
             takeover_callback=takeover_callback,
         )
-        self._pending_task: str | None = None
-        self._pending_reference_images: list[dict[str, str]] = []
+        self._task: str | None = None
+        self._ref_images: list[dict[str, str]] = []
 
     def _get_default_system_prompt(self, lang: str) -> str:
-        return get_system_prompt(lang)
+        return MOBIZEN_SYSTEM_PROMPT
 
     def _prepare_initial_context(
         self,
@@ -77,12 +79,19 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
         current_app: str,
         reference_images: list[dict[str, str]] | None = None,
     ) -> None:
-        """Stash task and reference images for the first step."""
-        self._pending_task = task
-        self._pending_reference_images = (reference_images or []).copy()
+        """Stash task and reference images. History is cleared per task."""
+        self._task = task
+        self._ref_images = (reference_images or []).copy()
+        self._mobizen_history: list[dict[str, Any]] = []
 
     async def _execute_step(self) -> AsyncGenerator[dict[str, Any], None]:
-        """Execute a single step: screenshot -> LLM -> parse -> execute."""
+        """Execute a single step: screenshot -> build messages -> LLM ->
+        parse -> execute.
+
+        Messages are built fresh each step: [system, user] only.
+        Previous step subtasks are compressed into a text string inside
+        the user message, matching the original MobiZen-GUI format.
+        """
         self._step_count += 1
 
         # 1. Capture device state
@@ -95,16 +104,8 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                 },
             ):
                 screenshot = await asyncio.to_thread(self.device.get_screenshot)
-            with trace_span(
-                "step.get_current_app",
-                attrs={
-                    "step": self._step_count,
-                    "agent_type": self.__class__.__name__,
-                },
-            ):
-                current_app = await asyncio.to_thread(self.device.get_current_app)
         except Exception as e:
-            logger.error(f"Failed to get device info: {e}")
+            logger.error(f"Failed to get screenshot: {e}")
             yield {"type": "error", "data": {"message": f"Device error: {e}"}}
             yield {
                 "type": "step",
@@ -119,7 +120,7 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             }
             return
 
-        # 2. Build messages
+        # 2. Build messages — stateless: [system, user] only
         with trace_span(
             "step.build_message",
             attrs={
@@ -127,41 +128,54 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                 "agent_type": self.__class__.__name__,
             },
         ):
-            # Strip old images from context history
-            self._context = [
-                MessageBuilder.remove_images_from_message(message)
-                for message in self._context
+            # Build history text from previous steps (compressed)
+            history_text = ""
+            for idx, hist in enumerate(self._mobizen_history):
+                subtask = hist.get("subtask", "")
+                subtask = subtask.replace("\n", "").replace('"', "")
+                history_text += f"Step {idx + 1}: {subtask}\n"
+
+            if not self._mobizen_history:
+                user_query = f"The user query: {self._task}.\n"
+            else:
+                user_query = (
+                    f"The user query: {self._task}.\n"
+                    f"Task progress (You have done the following operation "
+                    f"on the current device): {history_text}"
+                )
+
+            # Build user message: text first, then screenshot image
+            # (matches original MobiZen-GUI message order)
+            image_data_url = f"data:image/png;base64,{screenshot.base64_data}"
+            content_parts: list[dict[str, Any]] = [
+                {"type": "text", "text": user_query},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": image_data_url},
+                },
             ]
 
-            screen_info = MessageBuilder.build_screen_info(current_app)
-            if self._step_count == 1 and self._pending_task is not None:
-                reference_notice = MessageBuilder.build_user_reference_images_notice(
-                    len(self._pending_reference_images)
-                )
-                reference_section = (
-                    f"\n\n** User Reference Images **\n\n{reference_notice}"
-                    if reference_notice
-                    else ""
-                )
-                text_content = (
-                    f"The user query: {self._pending_task}{reference_section}\n\n"
-                    f"{screen_info}"
-                )
-                self._pending_task = None
-                images = [
-                    {"mime_type": "image/png", "data": screenshot.base64_data},
-                    *self._pending_reference_images,
-                ]
-                self._pending_reference_images = []
-            else:
-                text_content = f"{screen_info}"
-                images = [{"mime_type": "image/png", "data": screenshot.base64_data}]
-            self._context.append(
-                MessageBuilder.create_user_message_with_images(
-                    text=text_content,
-                    images=images,
-                )
-            )
+            # Attach reference images on first step
+            if not self._mobizen_history and self._ref_images:
+                for ref in self._ref_images:
+                    content_parts.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": (
+                                    f"data:{ref['mime_type']};base64,{ref['data']}"
+                                ),
+                            },
+                        }
+                    )
+                self._ref_images = []
+
+            # Reset context to fresh [system, user] pair
+            self._context = [
+                self._initial_system_message,
+                {"role": "user", "content": content_parts},
+            ]
+
         # 3. Stream LLM call
         image_count = _count_image_parts(self._context)
         if image_count < 1:
@@ -186,7 +200,6 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                     "step": self._step_count,
                     "agent_type": self.__class__.__name__,
                     "model_name": self.model_config.model_name,
-                    "message_count": len(self._context),
                 },
             ):
                 async for chunk_data in self._stream_openai(self._context):
@@ -211,9 +224,11 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                         )
 
             thinking = "".join(thinking_parts)
+
         except asyncio.CancelledError:
             logger.info(f"Step {self._step_count} cancelled during LLM call")
             raise
+
         except Exception as e:
             logger.error(f"LLM error: {e}")
             if self.agent_config.verbose:
@@ -231,6 +246,7 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                 },
             }
             return
+
         # 4. Parse response and convert action
         with trace_span(
             "step.parse_action",
@@ -242,9 +258,9 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             parsed_thinking, subtask, mobizen_action = self.parser.parse_response(
                 raw_content
             )
-            # Use parsed thinking if streaming didn't capture any
             if not thinking and parsed_thinking:
                 thinking = parsed_thinking
+
             try:
                 if mobizen_action:
                     action = self.parser.convert_action(mobizen_action)
@@ -255,10 +271,8 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                     }
             except Exception as e:
                 logger.warning(f"Failed to convert action: {mobizen_action}, err: {e}")
-                action = {
-                    "_metadata": "finish",
-                    "message": str(e),
-                }
+                action = {"_metadata": "finish", "message": str(e)}
+
             if self.agent_config.verbose:
                 logger.debug(f"raw_content: \n\n {raw_content}\n\n")
                 logger.debug(f"thinking_parts: \n\n {thinking_parts}\n\n")
@@ -266,10 +280,12 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                 logger.debug(f"subtask: \n\n{subtask}\n\n")
                 logger.debug(f"mobizen_action: \n\n{mobizen_action}\n\n")
                 logger.debug(f"action: \n\n{action}\n\n")
+
         if self.agent_config.verbose:
             msgs = get_messages(self.agent_config.lang)
             logger.debug(f"🎯 {msgs['action']}:")
             logger.debug(json.dumps(action, ensure_ascii=False, indent=2))
+
         # 5. Execute action
         try:
             with trace_span(
@@ -294,29 +310,16 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             from AutoGLM_GUI.actions import ActionResult
 
             result = ActionResult(success=False, should_finish=True, message=str(e))
-        # 6. Update context history
-        with trace_span(
-            "step.update_context",
-            attrs={
-                "step": self._step_count,
-                "agent_type": self.__class__.__name__,
-            },
-        ):
-            # Strip image from user message in history
-            self._context[-1] = MessageBuilder.remove_images_from_message(
-                self._context[-1]
-            )
-            # Format assistant response in MobiZen format for context
-            assistant_content = (
-                f"Thought: {thinking}\n"
-                f"Action: {subtask}\n"
-                f"<tool_call>\n"
-                f"{json.dumps(mobizen_action or {}, ensure_ascii=False)}\n"
-                f"</tool_call>"
-            )
-            self._context.append(
-                MessageBuilder.create_assistant_message(assistant_content)
-            )
+
+        # 6. Record step in history (for next step's text compression)
+        self._mobizen_history.append(
+            {
+                "subtask": subtask,
+                "thought": thinking,
+                "action": mobizen_action,
+            }
+        )
+
         # 7. Check completion
         finished = action.get("_metadata") == "finish" or result.should_finish
         if finished and self.agent_config.verbose:
@@ -325,6 +328,7 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
                 f"✅ {msgs['task_completed']}: "
                 f"{result.message or action.get('message', msgs['done'])}"
             )
+
         # 8. Yield step result
         yield {
             "type": "step",
@@ -343,6 +347,7 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
         self, messages: list[dict[str, Any]]
     ) -> AsyncGenerator[dict[str, str], None]:
         """Stream OpenAI chat completion, yielding thinking and raw chunks.
+
         Uses marker-based splitting: everything before <tool_call> is
         "thinking", everything after is "raw" (the tool call JSON).
         """
@@ -356,46 +361,51 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             extra_body=self.model_config.extra_body,
             stream=True,
         )
+
         buffer = ""
         marker = "<tool_call>"
         in_tool_call = False
         reasoning_buffer = ""
+
         try:
             async for chunk in stream:
                 if self._cancel_event.is_set():
                     await stream.close()
                     raise asyncio.CancelledError()
+
                 if len(chunk.choices) == 0:
                     continue
-                # Handle reasoning_content (for models like Qwen3 that
-                # separate thinking from content in streaming)
+
                 delta = chunk.choices[0].delta
                 if hasattr(delta, "reasoning_content") and delta.reasoning_content:
                     reasoning_buffer += delta.reasoning_content
                     yield {"type": "reasoning", "content": delta.reasoning_content}
+
                 if delta.content is not None:
                     content = delta.content
                     yield {"type": "raw", "content": content}
+
                     if in_tool_call:
                         continue
+
                     buffer += content
-                    # Check for the tool_call marker
+
                     if marker in buffer:
                         thinking_part = buffer.split(marker, 1)[0]
                         yield {"type": "thinking", "content": thinking_part}
                         in_tool_call = True
                         continue
-                    # Check if buffer ends with a partial marker
+
                     is_potential = False
                     for i in range(1, len(marker)):
                         if buffer.endswith(marker[:i]):
                             is_potential = True
                             break
+
                     if not is_potential and len(buffer) > 0:
                         yield {"type": "thinking", "content": buffer}
                         buffer = ""
         finally:
             await stream.close()
-            # Yield any remaining reasoning buffer
             if reasoning_buffer:
                 logger.debug(f"Total reasoning content: {len(reasoning_buffer)} chars")

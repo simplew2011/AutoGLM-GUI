@@ -18,11 +18,6 @@ from typing import Any
 class MobiZenParser:
     """Parse MobiZen model output and convert actions."""
 
-    # MobiZen coordinate scale (virtual 999x999)
-    MOBIZEN_SCALE = 999
-    # AutoGLM-GUI coordinate scale
-    AUTOGLM_SCALE = 1000
-
     def parse_response(self, raw_content: str) -> tuple[str, str, dict[str, Any]]:
         """Parse raw model response into (thinking, action_description, action_dict).
 
@@ -108,24 +103,28 @@ class MobiZenParser:
 
         if action_type == "click":
             coord = args.get("coordinate", [0, 0])
-            x, y = self._scale_coordinates(coord[0], coord[1])
-            return {"_metadata": "do", "action": "Tap", "element": [x, y]}
+            return {
+                "_metadata": "do",
+                "action": "Tap",
+                "element": [int(coord[0]), int(coord[1])],
+            }
 
         elif action_type == "long_press":
             coord = args.get("coordinate", [0, 0])
-            x, y = self._scale_coordinates(coord[0], coord[1])
-            return {"_metadata": "do", "action": "Long Press", "element": [x, y]}
+            return {
+                "_metadata": "do",
+                "action": "Long Press",
+                "element": [int(coord[0]), int(coord[1])],
+            }
 
         elif action_type == "swipe":
             start = args.get("coordinate", [0, 0])
             end = args.get("coordinate2", [0, 0])
-            x1, y1 = self._scale_coordinates(start[0], start[1])
-            x2, y2 = self._scale_coordinates(end[0], end[1])
             return {
                 "_metadata": "do",
                 "action": "Swipe",
-                "start": [x1, y1],
-                "end": [x2, y2],
+                "start": [int(start[0]), int(start[1])],
+                "end": [int(end[0]), int(end[1])],
             }
 
         elif action_type == "type":
@@ -163,17 +162,6 @@ class MobiZenParser:
                 "_metadata": "finish",
                 "message": f"Unknown action: {action_type}",
             }
-
-    @classmethod
-    def _scale_coordinates(cls, x: int, y: int) -> list[int]:
-        """Scale coordinates from MobiZen 999x999 to AutoGLM 1000x1000."""
-        scaled_x = max(
-            0, min(int(x * cls.AUTOGLM_SCALE / cls.MOBIZEN_SCALE), cls.AUTOGLM_SCALE)
-        )
-        scaled_y = max(
-            0, min(int(y * cls.AUTOGLM_SCALE / cls.MOBIZEN_SCALE), cls.AUTOGLM_SCALE)
-        )
-        return [scaled_x, scaled_y]
 
     @staticmethod
     def format_assistant_response(
