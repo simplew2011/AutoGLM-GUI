@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from agents import Agent, Runner, SQLiteSession, function_tool
+from agents import Agent, ModelSettings, Runner, SQLiteSession, function_tool
 from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 from openai import AsyncOpenAI
 
@@ -366,16 +366,25 @@ async def chat(device_id: str, message: str) -> str:
 
 
 def _create_planner_agent(client: AsyncOpenAI) -> Agent[Any]:
+    config = config_manager.get_effective_config()
     planner_model = get_planner_model()
     model = OpenAIChatCompletionsModel(
         model=planner_model,
         openai_client=client,
+    )
+    model_settings = ModelSettings(
+        temperature=config.decision_temperature,
+        top_p=config.decision_top_p,
+        max_tokens=config.decision_max_tokens,
+        frequency_penalty=config.decision_frequency_penalty,
+        extra_body=config.decision_extra_body if config.decision_extra_body else None,
     )
 
     return Agent(
         name="Planner",
         instructions=PLANNER_INSTRUCTIONS,
         model=model,
+        model_settings=model_settings,
         tools=[list_devices, chat],
     )
 

@@ -52,10 +52,57 @@ class ThinkingMode(StrEnum):
     DEEP = "deep"  # 深度思考模式 - 完整思考过程
 
 
+# 配置字段默认值（同时提供所有字段名和默认值，单一来源）
+_CONFIG_DEFAULTS: dict[str, Any] = {
+    "base_url": "",
+    "model_name": "autoglm-phone-9b",
+    "api_key": "EMPTY",
+    "max_tokens": 3000,
+    "temperature": 0.0,
+    "top_p": 0.85,
+    "frequency_penalty": 0.2,
+    "extra_body": {},
+    "agent_type": "glm-async",
+    "agent_config_params": None,
+    "default_max_steps": 100,
+    "layered_max_turns": LAYERED_MAX_TURNS_DEFAULT,
+    "decision_base_url": None,
+    "decision_model_name": None,
+    "decision_api_key": None,
+    "decision_max_tokens": 3000,
+    "decision_temperature": 0.0,
+    "decision_top_p": 0.85,
+    "decision_frequency_penalty": 0.2,
+    "decision_extra_body": {},
+    "chat_base_url": None,
+    "chat_model_name": None,
+    "chat_api_key": None,
+    "chat_enable_thinking": None,
+    "chat_max_tokens": 4096,
+    "chat_temperature": 1.0,
+    "chat_top_p": 0.95,
+    "chat_frequency_penalty": 0.2,
+    "chat_extra_body": {},
+    "intent_base_url": None,
+    "intent_model_name": None,
+    "intent_api_key": None,
+    "intent_max_tokens": 4096,
+    "intent_temperature": 0.7,
+    "intent_top_p": 0.80,
+    "intent_frequency_penalty": 0.2,
+    "intent_extra_body": {},
+}
+
+
 class ConfigFileData(TypedDict, total=False):
     base_url: str
     model_name: str
     api_key: str
+    max_tokens: int
+    temperature: float
+    top_p: float
+    frequency_penalty: float
+    extra_body: dict[str, Any]
     agent_type: str
     agent_config_params: dict[str, Any]
     default_max_steps: int | None
@@ -63,13 +110,28 @@ class ConfigFileData(TypedDict, total=False):
     decision_base_url: str
     decision_model_name: str
     decision_api_key: str
+    decision_max_tokens: int
+    decision_temperature: float
+    decision_top_p: float
+    decision_frequency_penalty: float
+    decision_extra_body: dict[str, Any]
     chat_base_url: str
     chat_model_name: str
     chat_api_key: str
     chat_enable_thinking: bool
+    chat_max_tokens: int
+    chat_temperature: float
+    chat_top_p: float
+    chat_frequency_penalty: float
+    chat_extra_body: dict[str, Any]
     intent_base_url: str
     intent_model_name: str
     intent_api_key: str
+    intent_max_tokens: int
+    intent_temperature: float
+    intent_top_p: float
+    intent_frequency_penalty: float
+    intent_extra_body: dict[str, Any]
 
 
 class ConfigModel(BaseModel):
@@ -78,6 +140,12 @@ class ConfigModel(BaseModel):
     base_url: str = ""
     model_name: str = "autoglm-phone-9b"
     api_key: str = "EMPTY"
+
+    max_tokens: int = 3000
+    temperature: float = 0.0
+    top_p: float = 0.85
+    frequency_penalty: float = 0.2
+    extra_body: dict[str, Any] = {}
 
     # Agent 类型配置
     agent_type: str = "glm-async"  # Agent type (e.g., "glm-async", "mai")
@@ -93,16 +161,34 @@ class ConfigModel(BaseModel):
     decision_model_name: str | None = None
     decision_api_key: str | None = None
 
+    decision_max_tokens: int = 3000
+    decision_temperature: float = 0.0
+    decision_top_p: float = 0.85
+    decision_frequency_penalty: float = 0.2
+    decision_extra_body: dict[str, Any] = {}
+
     # 对话模型配置（用于对话模式）
     chat_base_url: str | None = None
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool = True
 
+    chat_max_tokens: int = 4096
+    chat_temperature: float = 1.0
+    chat_top_p: float = 0.95
+    chat_frequency_penalty: float = 0.2
+    chat_extra_body: dict[str, Any] = {}
+
     # 意图识别模型配置（用于自动模式）
     intent_base_url: str | None = None
     intent_model_name: str | None = None
     intent_api_key: str | None = None
+
+    intent_max_tokens: int = 4096
+    intent_temperature: float = 0.7
+    intent_top_p: float = 0.80
+    intent_frequency_penalty: float = 0.2
+    intent_extra_body: dict[str, Any] = {}
 
     @field_validator("default_max_steps")
     @classmethod
@@ -204,25 +290,52 @@ class ConfigLayer:
     base_url: str | None = None
     model_name: str | None = None
     api_key: str | None = None
+    max_tokens: int | None = None
+    temperature: float | None = None
+    top_p: float | None = None
+    frequency_penalty: float | None = None
+    extra_body: dict[str, Any] | None = None
+
     # Agent 类型配置
     agent_type: str | None = None
     agent_config_params: dict[str, Any] | None = None
     # Agent 执行配置
     default_max_steps: int | None = None
     layered_max_turns: int | None = None
+    
     # 决策模型配置
     decision_base_url: str | None = None
     decision_model_name: str | None = None
     decision_api_key: str | None = None
+    
+    decision_max_tokens: int | None = None
+    decision_temperature: float | None = None
+    decision_top_p: float | None = None
+    decision_frequency_penalty: float | None = None
+    decision_extra_body: dict[str, Any] | None = None
+
     # 对话模型配置
     chat_base_url: str | None = None
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool | None = None
+
+    chat_max_tokens: int | None = None
+    chat_temperature: float | None = None
+    chat_top_p: float | None = None
+    chat_frequency_penalty: float | None = None
+    chat_extra_body: dict[str, Any] | None = None
+
     # 意图识别模型配置
     intent_base_url: str | None = None
     intent_model_name: str | None = None
     intent_api_key: str | None = None
+
+    intent_max_tokens: int | None = None
+    intent_temperature: float | None = None
+    intent_top_p: float | None = None
+    intent_frequency_penalty: float | None = None
+    intent_extra_body: dict[str, Any] | None = None
 
     source: ConfigSource = ConfigSource.DEFAULT
     explicit_keys: set[str] = field(default_factory=set, repr=False)
@@ -234,25 +347,7 @@ class ConfigLayer:
 
     def to_dict(self) -> ConfigFileData:
         """转换为字典，保留显式 null 字段."""
-        data = {
-            "base_url": self.base_url,
-            "model_name": self.model_name,
-            "api_key": self.api_key,
-            "agent_type": self.agent_type,
-            "agent_config_params": self.agent_config_params,
-            "default_max_steps": self.default_max_steps,
-            "layered_max_turns": self.layered_max_turns,
-            "decision_base_url": self.decision_base_url,
-            "decision_model_name": self.decision_model_name,
-            "decision_api_key": self.decision_api_key,
-            "chat_base_url": self.chat_base_url,
-            "chat_model_name": self.chat_model_name,
-            "chat_api_key": self.chat_api_key,
-            "chat_enable_thinking": self.chat_enable_thinking,
-            "intent_base_url": self.intent_base_url,
-            "intent_model_name": self.intent_model_name,
-            "intent_api_key": self.intent_api_key,
-        }
+        data = {k: getattr(self, k, None) for k in _CONFIG_DEFAULTS}
         return cast(
             ConfigFileData,
             {k: v for k, v in data.items() if k in self.explicit_keys or v is not None},
@@ -310,23 +405,7 @@ class UnifiedConfigManager:
         self._env_layer = ConfigLayer(source=ConfigSource.ENV)
         self._file_layer = ConfigLayer(source=ConfigSource.FILE)
         self._default_layer = ConfigLayer(
-            base_url="",
-            model_name="autoglm-phone-9b",
-            api_key="EMPTY",
-            agent_type="glm-async",
-            agent_config_params=None,
-            default_max_steps=100,
-            layered_max_turns=LAYERED_MAX_TURNS_DEFAULT,
-            decision_base_url=None,
-            decision_model_name=None,
-            decision_api_key=None,
-            chat_base_url=None,
-            chat_model_name=None,
-            chat_api_key=None,
-            chat_enable_thinking=None,
-            intent_base_url=None,
-            intent_model_name=None,
-            intent_api_key=None,
+            **_CONFIG_DEFAULTS,
             source=ConfigSource.DEFAULT,
         )
 
@@ -423,6 +502,134 @@ class UnifiedConfigManager:
         intent_model_name = os.getenv("AUTOGLM_INTENT_MODEL_NAME")
         intent_api_key = os.getenv("AUTOGLM_INTENT_API_KEY")
 
+        max_tokens = None
+        max_tokens_str = os.getenv("AUTOGLM_MAX_TOKENS")
+        if max_tokens_str:
+            try:
+                max_tokens = int(max_tokens_str)
+            except ValueError:
+                logger.warning("AUTOGLM_MAX_TOKENS must be an integer")
+
+        temperature = None
+        temperature_str = os.getenv("AUTOGLM_TEMPERATURE")
+        if temperature_str:
+            try:
+                temperature = float(temperature_str)
+            except ValueError:
+                logger.warning("AUTOGLM_TEMPERATURE must be a float")
+
+        top_p = None
+        top_p_str = os.getenv("AUTOGLM_TOP_P")
+        if top_p_str:
+            try:
+                top_p = float(top_p_str)
+            except ValueError:
+                logger.warning("AUTOGLM_TOP_P must be a float")
+
+        frequency_penalty = None
+        frequency_penalty_str = os.getenv("AUTOGLM_FREQUENCY_PENALTY")
+        if frequency_penalty_str:
+            try:
+                frequency_penalty = float(frequency_penalty_str)
+            except ValueError:
+                logger.warning("AUTOGLM_FREQUENCY_PENALTY must be a float")
+
+        decision_max_tokens = None
+        decision_max_tokens_str = os.getenv("AUTOGLM_DECISION_MAX_TOKENS")
+        if decision_max_tokens_str:
+            try:
+                decision_max_tokens = int(decision_max_tokens_str)
+            except ValueError:
+                logger.warning("AUTOGLM_DECISION_MAX_TOKENS must be an integer")
+
+        decision_temperature = None
+        decision_temperature_str = os.getenv("AUTOGLM_DECISION_TEMPERATURE")
+        if decision_temperature_str:
+            try:
+                decision_temperature = float(decision_temperature_str)
+            except ValueError:
+                logger.warning("AUTOGLM_DECISION_TEMPERATURE must be a float")
+
+        decision_top_p = None
+        decision_top_p_str = os.getenv("AUTOGLM_DECISION_TOP_P")
+        if decision_top_p_str:
+            try:
+                decision_top_p = float(decision_top_p_str)
+            except ValueError:
+                logger.warning("AUTOGLM_DECISION_TOP_P must be a float")
+
+        decision_frequency_penalty = None
+        decision_frequency_penalty_str = os.getenv("AUTOGLM_DECISION_FREQUENCY_PENALTY")
+        if decision_frequency_penalty_str:
+            try:
+                decision_frequency_penalty = float(decision_frequency_penalty_str)
+            except ValueError:
+                logger.warning("AUTOGLM_DECISION_FREQUENCY_PENALTY must be a float")
+
+        chat_max_tokens = None
+        chat_max_tokens_str = os.getenv("AUTOGLM_CHAT_MAX_TOKENS")
+        if chat_max_tokens_str:
+            try:
+                chat_max_tokens = int(chat_max_tokens_str)
+            except ValueError:
+                logger.warning("AUTOGLM_CHAT_MAX_TOKENS must be an integer")
+
+        chat_temperature = None
+        chat_temperature_str = os.getenv("AUTOGLM_CHAT_TEMPERATURE")
+        if chat_temperature_str:
+            try:
+                chat_temperature = float(chat_temperature_str)
+            except ValueError:
+                logger.warning("AUTOGLM_CHAT_TEMPERATURE must be a float")
+
+        chat_top_p = None
+        chat_top_p_str = os.getenv("AUTOGLM_CHAT_TOP_P")
+        if chat_top_p_str:
+            try:
+                chat_top_p = float(chat_top_p_str)
+            except ValueError:
+                logger.warning("AUTOGLM_CHAT_TOP_P must be a float")
+
+        chat_frequency_penalty = None
+        chat_frequency_penalty_str = os.getenv("AUTOGLM_CHAT_FREQUENCY_PENALTY")
+        if chat_frequency_penalty_str:
+            try:
+                chat_frequency_penalty = float(chat_frequency_penalty_str)
+            except ValueError:
+                logger.warning("AUTOGLM_CHAT_FREQUENCY_PENALTY must be a float")
+
+        intent_max_tokens = None
+        intent_max_tokens_str = os.getenv("AUTOGLM_INTENT_MAX_TOKENS")
+        if intent_max_tokens_str:
+            try:
+                intent_max_tokens = int(intent_max_tokens_str)
+            except ValueError:
+                logger.warning("AUTOGLM_INTENT_MAX_TOKENS must be an integer")
+
+        intent_temperature = None
+        intent_temperature_str = os.getenv("AUTOGLM_INTENT_TEMPERATURE")
+        if intent_temperature_str:
+            try:
+                intent_temperature = float(intent_temperature_str)
+            except ValueError:
+                logger.warning("AUTOGLM_INTENT_TEMPERATURE must be a float")
+
+        intent_top_p = None
+        intent_top_p_str = os.getenv("AUTOGLM_INTENT_TOP_P")
+        if intent_top_p_str:
+            try:
+                intent_top_p = float(intent_top_p_str)
+            except ValueError:
+                logger.warning("AUTOGLM_INTENT_TOP_P must be a float")
+
+        intent_frequency_penalty = None
+        intent_frequency_penalty_str = os.getenv("AUTOGLM_INTENT_FREQUENCY_PENALTY")
+        if intent_frequency_penalty_str:
+            try:
+                intent_frequency_penalty = float(intent_frequency_penalty_str)
+            except ValueError:
+                logger.warning("AUTOGLM_INTENT_FREQUENCY_PENALTY must be a float")
+
         default_max_steps_str = os.getenv("AUTOGLM_DEFAULT_MAX_STEPS")
         default_max_steps = None
         if default_max_steps_str:
@@ -443,18 +650,34 @@ class UnifiedConfigManager:
             "base_url": base_url if base_url else None,
             "model_name": model_name if model_name else None,
             "api_key": api_key if api_key else None,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+            "frequency_penalty": frequency_penalty,
             "default_max_steps": default_max_steps,
             "layered_max_turns": layered_max_turns,
             "decision_base_url": decision_base_url if decision_base_url else None,
             "decision_model_name": decision_model_name if decision_model_name else None,
             "decision_api_key": decision_api_key if decision_api_key else None,
+            "decision_max_tokens": decision_max_tokens,
+            "decision_temperature": decision_temperature,
+            "decision_top_p": decision_top_p,
+            "decision_frequency_penalty": decision_frequency_penalty,
             "chat_base_url": chat_base_url if chat_base_url else None,
             "chat_model_name": chat_model_name if chat_model_name else None,
             "chat_api_key": chat_api_key if chat_api_key else None,
             "chat_enable_thinking": chat_enable_thinking,
+            "chat_max_tokens": chat_max_tokens,
+            "chat_temperature": chat_temperature,
+            "chat_top_p": chat_top_p,
+            "chat_frequency_penalty": chat_frequency_penalty,
             "intent_base_url": intent_base_url if intent_base_url else None,
             "intent_model_name": intent_model_name if intent_model_name else None,
             "intent_api_key": intent_api_key if intent_api_key else None,
+            "intent_max_tokens": intent_max_tokens,
+            "intent_temperature": intent_temperature,
+            "intent_top_p": intent_top_p,
+            "intent_frequency_penalty": intent_frequency_penalty,
         }
         self._env_layer = ConfigLayer(
             **env_values,
@@ -517,25 +740,8 @@ class UnifiedConfigManager:
                 raw_agent_type = "glm-async"
 
             # 更新文件层
-            file_values = {
-                "base_url": config_data.get("base_url"),
-                "model_name": config_data.get("model_name"),
-                "api_key": config_data.get("api_key"),
-                "agent_type": raw_agent_type,
-                "agent_config_params": config_data.get("agent_config_params"),
-                "default_max_steps": config_data.get("default_max_steps"),
-                "layered_max_turns": config_data.get("layered_max_turns"),
-                "decision_base_url": config_data.get("decision_base_url"),
-                "decision_model_name": config_data.get("decision_model_name"),
-                "decision_api_key": config_data.get("decision_api_key"),
-                "chat_base_url": config_data.get("chat_base_url"),
-                "chat_model_name": config_data.get("chat_model_name"),
-                "chat_api_key": config_data.get("chat_api_key"),
-                "chat_enable_thinking": config_data.get("chat_enable_thinking"),
-                "intent_base_url": config_data.get("intent_base_url"),
-                "intent_model_name": config_data.get("intent_model_name"),
-                "intent_api_key": config_data.get("intent_api_key"),
-            }
+            file_values = {key: config_data.get(key) for key in _CONFIG_DEFAULTS}
+            file_values["agent_type"] = raw_agent_type
             self._file_layer = ConfigLayer(
                 **file_values,
                 source=ConfigSource.FILE,
@@ -566,6 +772,11 @@ class UnifiedConfigManager:
         base_url: str,
         model_name: str,
         api_key: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        frequency_penalty: float | None = None,
+        extra_body: dict[str, Any] | None = None,
         agent_type: str | None = None,
         agent_config_params: dict[str, Any] | None = None,
         default_max_steps: int | None = None,
@@ -573,13 +784,28 @@ class UnifiedConfigManager:
         decision_base_url: str | None = None,
         decision_model_name: str | None = None,
         decision_api_key: str | None = None,
+        decision_max_tokens: int | None = None,
+        decision_temperature: float | None = None,
+        decision_top_p: float | None = None,
+        decision_frequency_penalty: float | None = None,
+        decision_extra_body: dict[str, Any] | None = None,
         chat_base_url: str | None = None,
         chat_model_name: str | None = None,
         chat_api_key: str | None = None,
         chat_enable_thinking: bool = True,
+        chat_max_tokens: int | None = None,
+        chat_temperature: float | None = None,
+        chat_top_p: float | None = None,
+        chat_frequency_penalty: float | None = None,
+        chat_extra_body: dict[str, Any] | None = None,
         intent_base_url: str | None = None,
         intent_model_name: str | None = None,
         intent_api_key: str | None = None,
+        intent_max_tokens: int | None = None,
+        intent_temperature: float | None = None,
+        intent_top_p: float | None = None,
+        intent_frequency_penalty: float | None = None,
+        intent_extra_body: dict[str, Any] | None = None,
         merge_mode: bool = True,
         default_max_steps_set: bool = False,
         layered_max_turns_set: bool = False,
@@ -615,6 +841,17 @@ class UnifiedConfigManager:
 
             if api_key:
                 new_config["api_key"] = api_key
+            if max_tokens is not None:
+                new_config["max_tokens"] = max_tokens
+            if temperature is not None:
+                new_config["temperature"] = temperature
+            if top_p is not None:
+                new_config["top_p"] = top_p
+            if frequency_penalty is not None:
+                new_config["frequency_penalty"] = frequency_penalty
+            if extra_body is not None:
+                new_config["extra_body"] = extra_body
+
             if agent_type is not None:
                 new_config["agent_type"] = agent_type
             if agent_config_params is not None:
@@ -636,6 +873,17 @@ class UnifiedConfigManager:
             if decision_api_key is not None:
                 new_config["decision_api_key"] = decision_api_key
 
+            if decision_max_tokens is not None:
+                new_config["decision_max_tokens"] = decision_max_tokens
+            if decision_temperature is not None:
+                new_config["decision_temperature"] = decision_temperature
+            if decision_top_p is not None:
+                new_config["decision_top_p"] = decision_top_p
+            if decision_frequency_penalty is not None:
+                new_config["decision_frequency_penalty"] = decision_frequency_penalty
+            if decision_extra_body is not None:
+                new_config["decision_extra_body"] = decision_extra_body
+
             # 对话模型配置
             if chat_base_url is not None:
                 new_config["chat_base_url"] = chat_base_url
@@ -645,6 +893,17 @@ class UnifiedConfigManager:
                 new_config["chat_api_key"] = chat_api_key
             new_config["chat_enable_thinking"] = chat_enable_thinking
 
+            if chat_max_tokens is not None:
+                new_config["chat_max_tokens"] = chat_max_tokens
+            if chat_temperature is not None:
+                new_config["chat_temperature"] = chat_temperature
+            if chat_top_p is not None:
+                new_config["chat_top_p"] = chat_top_p
+            if chat_frequency_penalty is not None:
+                new_config["chat_frequency_penalty"] = chat_frequency_penalty
+            if chat_extra_body is not None:
+                new_config["chat_extra_body"] = chat_extra_body
+
             # 意图识别模型配置
             if intent_base_url is not None:
                 new_config["intent_base_url"] = intent_base_url
@@ -653,6 +912,17 @@ class UnifiedConfigManager:
             if intent_api_key is not None:
                 new_config["intent_api_key"] = intent_api_key
 
+            if intent_max_tokens is not None:
+                new_config["intent_max_tokens"] = intent_max_tokens
+            if intent_temperature is not None:
+                new_config["intent_temperature"] = intent_temperature
+            if intent_top_p is not None:
+                new_config["intent_top_p"] = intent_top_p
+            if intent_frequency_penalty is not None:
+                new_config["intent_frequency_penalty"] = intent_frequency_penalty
+            if intent_extra_body is not None:
+                new_config["intent_extra_body"] = intent_extra_body
+
             # 合并模式：保留现有文件中未提供的字段
             if merge_mode and self._config_path.exists():
                 try:
@@ -660,24 +930,7 @@ class UnifiedConfigManager:
                         existing = json.load(f)
 
                     # 保留未提供的字段
-                    preserve_keys = [
-                        "api_key",
-                        "agent_type",
-                        "agent_config_params",
-                        "default_max_steps",
-                        "layered_max_turns",
-                        "decision_base_url",
-                        "decision_model_name",
-                        "decision_api_key",
-                        "chat_base_url",
-                        "chat_model_name",
-                        "chat_api_key",
-                        "chat_enable_thinking",
-                        "intent_base_url",
-                        "intent_model_name",
-                        "intent_api_key",
-                    ]
-                    for key in preserve_keys:
+                    for key in _CONFIG_DEFAULTS:
                         if key not in new_config and key in existing:
                             new_config[key] = existing[key]
 
@@ -755,28 +1008,7 @@ class UnifiedConfigManager:
         # 按优先级合并配置
         merged: ConfigFileData = {}
 
-        # 所有配置字段
-        config_keys = [
-            "base_url",
-            "model_name",
-            "api_key",
-            "agent_type",
-            "agent_config_params",
-            "default_max_steps",
-            "decision_base_url",
-            "decision_model_name",
-            "decision_api_key",
-            "layered_max_turns",
-            "chat_base_url",
-            "chat_model_name",
-            "chat_api_key",
-            "chat_enable_thinking",
-            "intent_base_url",
-            "intent_model_name",
-            "intent_api_key",
-        ]
-
-        for key in config_keys:
+        for key in _CONFIG_DEFAULTS:
             # 1. CLI 优先
             if self._cli_layer.has_value(key):
                 merged[key] = getattr(self._cli_layer, key)
@@ -956,6 +1188,26 @@ class UnifiedConfigManager:
         else:
             os.environ.pop("AUTOGLM_INTENT_API_KEY", None)
 
+        os.environ["AUTOGLM_MAX_TOKENS"] = str(config.max_tokens)
+        os.environ["AUTOGLM_TEMPERATURE"] = str(config.temperature)
+        os.environ["AUTOGLM_TOP_P"] = str(config.top_p)
+        os.environ["AUTOGLM_FREQUENCY_PENALTY"] = str(config.frequency_penalty)
+
+        os.environ["AUTOGLM_DECISION_MAX_TOKENS"] = str(config.decision_max_tokens)
+        os.environ["AUTOGLM_DECISION_TEMPERATURE"] = str(config.decision_temperature)
+        os.environ["AUTOGLM_DECISION_TOP_P"] = str(config.decision_top_p)
+        os.environ["AUTOGLM_DECISION_FREQUENCY_PENALTY"] = str(config.decision_frequency_penalty)
+
+        os.environ["AUTOGLM_CHAT_MAX_TOKENS"] = str(config.chat_max_tokens)
+        os.environ["AUTOGLM_CHAT_TEMPERATURE"] = str(config.chat_temperature)
+        os.environ["AUTOGLM_CHAT_TOP_P"] = str(config.chat_top_p)
+        os.environ["AUTOGLM_CHAT_FREQUENCY_PENALTY"] = str(config.chat_frequency_penalty)
+
+        os.environ["AUTOGLM_INTENT_MAX_TOKENS"] = str(config.intent_max_tokens)
+        os.environ["AUTOGLM_INTENT_TEMPERATURE"] = str(config.intent_temperature)
+        os.environ["AUTOGLM_INTENT_TOP_P"] = str(config.intent_top_p)
+        os.environ["AUTOGLM_INTENT_FREQUENCY_PENALTY"] = str(config.intent_frequency_penalty)
+
         logger.debug("Configuration synced to environment variables")
 
     # ==================== 工具方法 ====================
@@ -978,25 +1230,7 @@ class UnifiedConfigManager:
         config = self.get_effective_config()
         return cast(
             ConfigFileData,
-            {
-                "base_url": config.base_url,
-                "model_name": config.model_name,
-                "api_key": config.api_key,
-                "agent_type": config.agent_type,
-                "agent_config_params": config.agent_config_params,
-                "default_max_steps": config.default_max_steps,
-                "decision_base_url": config.decision_base_url,
-                "decision_model_name": config.decision_model_name,
-                "decision_api_key": config.decision_api_key,
-                "layered_max_turns": config.layered_max_turns,
-                "chat_base_url": config.chat_base_url,
-                "chat_model_name": config.chat_model_name,
-                "chat_api_key": config.chat_api_key,
-                "chat_enable_thinking": config.chat_enable_thinking,
-                "intent_base_url": config.intent_base_url,
-                "intent_model_name": config.intent_model_name,
-                "intent_api_key": config.intent_api_key,
-            },
+            {key: getattr(config, key) for key in _CONFIG_DEFAULTS},
         )
 
 

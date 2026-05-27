@@ -665,51 +665,109 @@ export async function sendTouchUp(
 // Configuration Management
 
 export interface ConfigResponse {
+  // Agent模型配置
   base_url: string;
   model_name: string;
   api_key: string;
   source: string;
+
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  extra_body?: Record<string, unknown>;
   // Agent 类型配置
   agent_type?: string;
   agent_config_params?: Record<string, unknown>;
   // Agent 执行配置
   default_max_steps: number | null;
   layered_max_turns: number;
+
   // 决策模型配置
   decision_base_url?: string;
   decision_model_name?: string;
   decision_api_key?: string;
+
+  decision_max_tokens?: number;
+  decision_temperature?: number;
+  decision_top_p?: number;
+  decision_frequency_penalty?: number;
+  decision_extra_body?: Record<string, unknown>;
+
   // 对话模型配置
   chat_base_url?: string;
   chat_model_name?: string;
   chat_api_key?: string;
   chat_enable_thinking?: boolean;
+
+  chat_max_tokens?: number;
+  chat_temperature?: number;
+  chat_top_p?: number;
+  chat_frequency_penalty?: number;
+  chat_extra_body?: Record<string, unknown>;
+
+  // 意图识别模型
   intent_base_url?: string;
   intent_model_name?: string;
   intent_api_key?: string;
+
+  intent_max_tokens?: number;
+  intent_temperature?: number;
+  intent_top_p?: number;
+  intent_frequency_penalty?: number;
+  intent_extra_body?: Record<string, unknown>;
 }
 
 export interface ConfigSaveRequest {
   base_url: string;
   model_name: string;
   api_key?: string;
+  max_tokens?: number;
+  temperature?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  extra_body?: Record<string, unknown>;
+
   // Agent 类型配置
   agent_type?: string;
   agent_config_params?: Record<string, unknown>;
   // Agent 执行配置
   default_max_steps?: number | null;
   layered_max_turns?: number;
+  
   // 决策模型配置
   decision_base_url?: string;
   decision_model_name?: string;
   decision_api_key?: string;
+  
+  decision_max_tokens?: number;
+  decision_temperature?: number;
+  decision_top_p?: number;
+  decision_frequency_penalty?: number;
+  decision_extra_body?: Record<string, unknown>;
+
+  // 对话模型配置
   chat_base_url?: string;
   chat_model_name?: string;
   chat_api_key?: string;
   chat_enable_thinking?: boolean;
+  
+  chat_max_tokens?: number;
+  chat_temperature?: number;
+  chat_top_p?: number;
+  chat_frequency_penalty?: number;
+  chat_extra_body?: Record<string, unknown>;
+
+  // 意图识别模型
   intent_base_url?: string;
   intent_model_name?: string;
   intent_api_key?: string;
+
+  intent_max_tokens?: number;
+  intent_temperature?: number;
+  intent_top_p?: number;
+  intent_frequency_penalty?: number;
+  intent_extra_body?: Record<string, unknown>;
 }
 
 export interface ConfigSaveResponse {

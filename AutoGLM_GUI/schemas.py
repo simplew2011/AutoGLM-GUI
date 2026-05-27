@@ -270,77 +270,63 @@ class DeviceListResponse(BaseModel):
     devices: list[DeviceResponse]  # 从 list[dict] 改为强类型
 
 
-class ConfigResponse(BaseModel):
-    """配置读取响应."""
-
-    base_url: str
-    model_name: str
-    api_key: str  # 返回实际值（明文）
-    source: str  # "CLI arguments" | "environment variables" | "config file (...)" | "default"
-
-    # Agent 类型配置
-    agent_type: str = "glm-async"  # Agent type (e.g., "glm-async", "mai")
-    agent_config_params: dict[str, Any] | None = None  # Agent-specific configuration
-
-    # Agent 执行配置
-    default_max_steps: int | None = 100  # None 表示不限制
-
-    # 分层代理配置
-    layered_max_turns: int | None = 50  # None 表示不限制
-
-    # 决策模型配置（用于分层代理）
-    decision_base_url: str | None = None
-    decision_model_name: str | None = None
-    decision_api_key: str | None = None
-
-    # 对话模型配置（用于对话模式）
-    chat_base_url: str | None = None
-    chat_model_name: str | None = None
-    chat_api_key: str | None = None
-    chat_enable_thinking: bool = True
-
-    # 意图识别模型配置（用于自动模式）
-    intent_base_url: str | None = None
-    intent_model_name: str | None = None
-    intent_api_key: str | None = None
-
-    conflicts: list[dict[str, Any]] | None = None  # 配置冲突信息（可选）
-
-
-class ConfigSaveRequest(BaseModel):
-    """配置保存请求."""
+class _ConfigBaseModel(BaseModel):
+    """ConfigResponse 和 ConfigSaveRequest 的共享字段."""
 
     base_url: str
     model_name: str = "autoglm-phone-9b"
     api_key: str | None = None
 
-    # Agent 类型配置
-    agent_type: str = "glm-async"  # Agent type to use (e.g., "glm-async", "mai")
-    agent_config_params: dict[str, Any] | None = (
-        None  # Agent-specific configuration parameters
-    )
+    max_tokens: int = 3000
+    temperature: float = 0.0
+    top_p: float = 0.85
+    frequency_penalty: float = 0.2
+    extra_body: dict[str, Any] = {}
 
-    # Agent 执行配置
-    default_max_steps: int | None = None  # 单次任务最大执行步数
+    agent_type: str = "glm-async"
+    agent_config_params: dict[str, Any] | None = None
 
-    # 分层代理配置
-    layered_max_turns: int | None = None  # 分层代理模式的最大轮次
+    default_max_steps: int | None = 100
+    layered_max_turns: int | None = 50
 
-    # 决策模型配置（用于分层代理）
     decision_base_url: str | None = None
     decision_model_name: str | None = None
     decision_api_key: str | None = None
+    decision_max_tokens: int = 3000
+    decision_temperature: float = 0.0
+    decision_top_p: float = 0.85
+    decision_frequency_penalty: float = 0.2
+    decision_extra_body: dict[str, Any] = {}
 
-    # 对话模型配置（用于对话模式）
     chat_base_url: str | None = None
     chat_model_name: str | None = None
     chat_api_key: str | None = None
     chat_enable_thinking: bool = True
+    chat_max_tokens: int = 4096
+    chat_temperature: float = 1.0
+    chat_top_p: float = 0.95
+    chat_frequency_penalty: float = 0.2
+    chat_extra_body: dict[str, Any] = {}
 
-    # 意图识别模型配置（用于自动模式）
     intent_base_url: str | None = None
     intent_model_name: str | None = None
     intent_api_key: str | None = None
+    intent_max_tokens: int = 4096
+    intent_temperature: float = 0.7
+    intent_top_p: float = 0.80
+    intent_frequency_penalty: float = 0.2
+    intent_extra_body: dict[str, Any] = {}
+
+
+class ConfigResponse(_ConfigBaseModel):
+    """配置读取响应."""
+
+    source: str = "default"
+    conflicts: list[dict[str, Any]] | None = None
+
+
+class ConfigSaveRequest(_ConfigBaseModel):
+    """配置保存请求."""
 
     @field_validator("default_max_steps")
     @classmethod

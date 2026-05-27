@@ -50,6 +50,8 @@ import {
   MessageSquare,
   Bot,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useTranslation } from '../lib/i18n-context';
 import { useDevices } from '../lib/device-context';
@@ -237,6 +239,7 @@ function ChatComponent() {
   const [showConfig, setShowConfig] = useState(false);
   const [showGroupManager, setShowGroupManager] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showOtherParams, setShowOtherParams] = useState(false);
   const [visionConnectionTesting, setVisionConnectionTesting] = useState(false);
   const [visionConnectionResult, setVisionConnectionResult] = useState<{
     success: boolean;
@@ -262,20 +265,43 @@ function ChatComponent() {
     base_url: VISION_PRESETS[0].config.base_url as string,
     model_name: VISION_PRESETS[0].config.model_name as string,
     api_key: '',
+    max_tokens: 3000 as number | '',
+    temperature: 0.0,
+    top_p: 0.85,
+    frequency_penalty: 0.2,
+    extra_body: '{}',
     agent_type: 'glm-async',
     agent_config_params: {} as Record<string, unknown>,
     default_max_steps: 100 as number | '',
     layered_max_turns: 50,
+    
     decision_base_url: '',
     decision_model_name: '',
     decision_api_key: '',
+    decision_max_tokens: 3000 as number | '',
+    decision_temperature: 0.0,
+    decision_top_p: 0.85,
+    decision_frequency_penalty: 0.2,
+    decision_extra_body: '{}',
+
     chat_base_url: '',
     chat_model_name: '',
     chat_api_key: '',
     chat_enable_thinking: true,
+    chat_max_tokens: 4096 as number | '',
+    chat_temperature: 1.0,
+    chat_top_p: 0.95,
+    chat_frequency_penalty: 0.2,
+    chat_extra_body: '{}',
+
     intent_base_url: '',
     intent_model_name: '',
     intent_api_key: '',
+    intent_max_tokens: 4096 as number | '',
+    intent_temperature: 0.7,
+    intent_top_p: 0.80,
+    intent_frequency_penalty: 0.2,
+    intent_extra_body: '{}',
   });
   const selectedVisionPreset = getSelectedVisionPreset(tempConfig.base_url);
   const selectedDecisionPreset = getSelectedDecisionPreset(
@@ -290,6 +316,12 @@ function ChatComponent() {
           base_url: data.base_url,
           model_name: data.model_name,
           api_key: data.api_key || undefined,
+          max_tokens: data.max_tokens ?? 3000,
+          temperature: data.temperature ?? 0.0,
+          top_p: data.top_p ?? 0.85,
+          frequency_penalty: data.frequency_penalty ?? 0.2,
+          extra_body: data.extra_body || {},
+
           agent_type: data.agent_type || 'glm-async',
           agent_config_params: data.agent_config_params || undefined,
           default_max_steps: data.default_max_steps ?? null,
@@ -297,13 +329,30 @@ function ChatComponent() {
           decision_base_url: data.decision_base_url || undefined,
           decision_model_name: data.decision_model_name || undefined,
           decision_api_key: data.decision_api_key || undefined,
+          decision_max_tokens: data.decision_max_tokens ?? 3000,
+          decision_temperature: data.decision_temperature ?? 0.0,
+          decision_top_p: data.decision_top_p ?? 0.85,
+          decision_frequency_penalty: data.decision_frequency_penalty ?? 0.2,
+          decision_extra_body: data.decision_extra_body || {},
+
           chat_base_url: data.chat_base_url || undefined,
           chat_model_name: data.chat_model_name || undefined,
           chat_api_key: data.chat_api_key || undefined,
           chat_enable_thinking: data.chat_enable_thinking ?? undefined,
+          chat_max_tokens: data.chat_max_tokens ?? 4096,
+          chat_temperature: data.chat_temperature ?? 1.0,
+          chat_top_p: data.chat_top_p ?? 0.95,
+          chat_frequency_penalty: data.chat_frequency_penalty ?? 0.2,
+          chat_extra_body: data.chat_extra_body || {},
+
           intent_base_url: data.intent_base_url || undefined,
           intent_model_name: data.intent_model_name || undefined,
           intent_api_key: data.intent_api_key || undefined,
+          intent_max_tokens: data.intent_max_tokens ?? 4096,
+          intent_temperature: data.intent_temperature ?? 0.7,
+          intent_top_p: data.intent_top_p ?? 0.80,
+          intent_frequency_penalty: data.intent_frequency_penalty ?? 0.2,
+          intent_extra_body: data.intent_extra_body || {},
         });
         // 当后端返回空配置时，使用智谱预设作为默认值
         const useDefault = !data.base_url;
@@ -315,6 +364,11 @@ function ChatComponent() {
             ? VISION_PRESETS[0].config.model_name
             : data.model_name,
           api_key: data.api_key || '',
+          max_tokens: data.max_tokens ?? 3000,
+          temperature: data.temperature ?? 0.0,
+          top_p: data.top_p ?? 0.85,
+          frequency_penalty: data.frequency_penalty ?? 0.2,
+          extra_body: data.extra_body ? JSON.stringify(data.extra_body) : '{}',
           agent_type: data.agent_type || 'glm-async',
           agent_config_params: data.agent_config_params || {},
           default_max_steps: data.default_max_steps ?? '',
@@ -322,13 +376,34 @@ function ChatComponent() {
           decision_base_url: data.decision_base_url || '',
           decision_model_name: data.decision_model_name || 'glm-4.7',
           decision_api_key: data.decision_api_key || '',
+          decision_max_tokens: data.decision_max_tokens ?? 3000,
+          decision_temperature: data.decision_temperature ?? 0.0,
+          decision_top_p: data.decision_top_p ?? 0.85,
+          decision_frequency_penalty: data.decision_frequency_penalty ?? 0.2,
+          decision_extra_body: data.decision_extra_body
+            ? JSON.stringify(data.decision_extra_body)
+            : '{}',
           chat_base_url: data.chat_base_url || '',
           chat_model_name: data.chat_model_name || '',
           chat_api_key: data.chat_api_key || '',
           chat_enable_thinking: data.chat_enable_thinking ?? true,
+          chat_max_tokens: data.chat_max_tokens ?? 4096,
+          chat_temperature: data.chat_temperature ?? 1.0,
+          chat_top_p: data.chat_top_p ?? 0.95,
+          chat_frequency_penalty: data.chat_frequency_penalty ?? 0.2,
+          chat_extra_body: data.chat_extra_body
+            ? JSON.stringify(data.chat_extra_body)
+            : '{}',
           intent_base_url: data.intent_base_url || '',
           intent_model_name: data.intent_model_name || '',
           intent_api_key: data.intent_api_key || '',
+          intent_max_tokens: data.intent_max_tokens ?? 4096,
+          intent_temperature: data.intent_temperature ?? 0.7,
+          intent_top_p: data.intent_top_p ?? 0.80,
+          intent_frequency_penalty: data.intent_frequency_penalty ?? 0.2,
+          intent_extra_body: data.intent_extra_body
+            ? JSON.stringify(data.intent_extra_body)
+            : '{}',
         });
 
         if (useDefault) {
@@ -382,12 +457,62 @@ function ChatComponent() {
       return;
     }
 
+    // Parse extra_body JSON for each model type
+    const parseExtraBody = (
+      raw: string,
+    ): Record<string, unknown> | null => {
+      if (!raw || !raw.trim()) return {};
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    };
+    const visionExtraBody = parseExtraBody(tempConfig.extra_body);
+    if (visionExtraBody === null) {
+      showToast(
+        t.chat.extraBodyInvalid || 'Extra Body must be valid JSON',
+        'error'
+      );
+      return;
+    }
+    const decisionExtraBody = parseExtraBody(tempConfig.decision_extra_body);
+    if (decisionExtraBody === null) {
+      showToast(
+        t.chat.extraBodyInvalid || 'Decision Extra Body must be valid JSON',
+        'error'
+      );
+      return;
+    }
+    const chatExtraBody = parseExtraBody(tempConfig.chat_extra_body);
+    if (chatExtraBody === null) {
+      showToast(
+        t.chat.extraBodyInvalid || 'Chat Extra Body must be valid JSON',
+        'error'
+      );
+      return;
+    }
+    const intentExtraBody = parseExtraBody(tempConfig.intent_extra_body);
+    if (intentExtraBody === null) {
+      showToast(
+        t.chat.extraBodyInvalid || 'Intent Extra Body must be valid JSON',
+        'error'
+      );
+      return;
+    }
+
     try {
       // 1. 保存配置
       const saveResult = await saveConfig({
         base_url: tempConfig.base_url,
         model_name: tempConfig.model_name || 'autoglm-phone-9b',
         api_key: tempConfig.api_key || undefined,
+        max_tokens:
+          tempConfig.max_tokens === '' ? undefined : tempConfig.max_tokens,
+        temperature: tempConfig.temperature,
+        top_p: tempConfig.top_p,
+        frequency_penalty: tempConfig.frequency_penalty,
+        extra_body: visionExtraBody,
         agent_type: tempConfig.agent_type,
         agent_config_params:
           Object.keys(tempConfig.agent_config_params).length > 0
@@ -401,19 +526,49 @@ function ChatComponent() {
         decision_base_url: tempConfig.decision_base_url || undefined,
         decision_model_name: tempConfig.decision_model_name || undefined,
         decision_api_key: tempConfig.decision_api_key || undefined,
+        decision_max_tokens:
+          tempConfig.decision_max_tokens === ''
+            ? undefined
+            : tempConfig.decision_max_tokens,
+        decision_temperature: tempConfig.decision_temperature,
+        decision_top_p: tempConfig.decision_top_p,
+        decision_frequency_penalty: tempConfig.decision_frequency_penalty,
+        decision_extra_body: decisionExtraBody,
         chat_base_url: tempConfig.chat_base_url || undefined,
         chat_model_name: tempConfig.chat_model_name || undefined,
         chat_api_key: tempConfig.chat_api_key || undefined,
         chat_enable_thinking: tempConfig.chat_enable_thinking,
+        chat_max_tokens:
+          tempConfig.chat_max_tokens === ''
+            ? undefined
+            : tempConfig.chat_max_tokens,
+        chat_temperature: tempConfig.chat_temperature,
+        chat_top_p: tempConfig.chat_top_p,
+        chat_frequency_penalty: tempConfig.chat_frequency_penalty,
+        chat_extra_body: chatExtraBody,
         intent_base_url: tempConfig.intent_base_url || undefined,
         intent_model_name: tempConfig.intent_model_name || undefined,
         intent_api_key: tempConfig.intent_api_key || undefined,
+        intent_max_tokens:
+          tempConfig.intent_max_tokens === ''
+            ? undefined
+            : tempConfig.intent_max_tokens,
+        intent_temperature: tempConfig.intent_temperature,
+        intent_top_p: tempConfig.intent_top_p,
+        intent_frequency_penalty: tempConfig.intent_frequency_penalty,
+        intent_extra_body: intentExtraBody,
       });
 
       setConfig({
         base_url: tempConfig.base_url,
         model_name: tempConfig.model_name,
         api_key: tempConfig.api_key || undefined,
+        max_tokens:
+          tempConfig.max_tokens === '' ? undefined : tempConfig.max_tokens,
+        temperature: tempConfig.temperature,
+        top_p: tempConfig.top_p,
+        frequency_penalty: tempConfig.frequency_penalty,
+        extra_body: visionExtraBody,
         agent_type: tempConfig.agent_type,
         agent_config_params:
           Object.keys(tempConfig.agent_config_params).length > 0
@@ -427,10 +582,40 @@ function ChatComponent() {
         decision_base_url: tempConfig.decision_base_url || undefined,
         decision_model_name: tempConfig.decision_model_name || undefined,
         decision_api_key: tempConfig.decision_api_key || undefined,
+        decision_max_tokens:
+          tempConfig.decision_max_tokens === ''
+            ? undefined
+            : tempConfig.decision_max_tokens,
+        decision_temperature: tempConfig.decision_temperature,
+        decision_top_p: tempConfig.decision_top_p,
+        decision_frequency_penalty: tempConfig.decision_frequency_penalty,
+        decision_extra_body: decisionExtraBody,
+        
         chat_base_url: tempConfig.chat_base_url || undefined,
         chat_model_name: tempConfig.chat_model_name || undefined,
         chat_api_key: tempConfig.chat_api_key || undefined,
         chat_enable_thinking: tempConfig.chat_enable_thinking || undefined,
+        chat_max_tokens:
+          tempConfig.chat_max_tokens === ''
+            ? undefined
+            : tempConfig.chat_max_tokens,
+        chat_temperature: tempConfig.chat_temperature,
+        chat_top_p: tempConfig.chat_top_p,
+        chat_frequency_penalty: tempConfig.chat_frequency_penalty,
+        chat_extra_body: chatExtraBody,
+
+        intent_base_url: tempConfig.intent_base_url || undefined,
+        intent_model_name: tempConfig.intent_model_name || undefined,
+        intent_api_key: tempConfig.intent_api_key || undefined,
+
+        intent_max_tokens:
+          tempConfig.intent_max_tokens === ''
+            ? undefined
+            : tempConfig.intent_max_tokens,
+        intent_temperature: tempConfig.intent_temperature,
+        intent_top_p: tempConfig.intent_top_p,
+        intent_frequency_penalty: tempConfig.intent_frequency_penalty,
+        intent_extra_body: intentExtraBody,
       });
 
       // 配置已保存，后端支持热更新，无需重启
@@ -709,6 +894,125 @@ function ChatComponent() {
                   }
                   placeholder="autoglm-phone-9b"
                 />
+              </div>
+
+              {/* Other Parameters Collapsible Card */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowOtherParams(!showOtherParams)}
+                  className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+                >
+                  <span>{t.chat.otherParameters || 'Other Parameters'}</span>
+                  {showOtherParams ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {showOtherParams && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-slate-200 dark:border-slate-700 pt-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="max_tokens">
+                        {t.chat.maxTokens || 'Max Tokens'}
+                      </Label>
+                      <Input
+                        id="max_tokens"
+                        type="number"
+                        min={1}
+                        value={tempConfig.max_tokens}
+                        onChange={e => {
+                          const rawValue = e.target.value.trim();
+                          setTempConfig(prev => ({
+                            ...prev,
+                            max_tokens:
+                              rawValue === ''
+                                ? ''
+                                : Math.max(1, parseInt(rawValue, 10) || 1),
+                          }));
+                        }}
+                        placeholder="3000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="temperature">
+                        {t.chat.temperature || 'Temperature'}
+                      </Label>
+                      <Input
+                        id="temperature"
+                        type="number"
+                        step={0.1}
+                        min={0}
+                        max={2}
+                        value={tempConfig.temperature}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            temperature: parseFloat(e.target.value) || 0.0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="top_p">{t.chat.topP || 'Top P'}</Label>
+                      <Input
+                        id="top_p"
+                        type="number"
+                        step={0.01}
+                        min={0}
+                        max={1}
+                        value={tempConfig.top_p}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            top_p: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="frequency_penalty">
+                        {t.chat.frequencyPenalty || 'Frequency Penalty'}
+                      </Label>
+                      <Input
+                        id="frequency_penalty"
+                        type="number"
+                        step={0.1}
+                        min={-2}
+                        max={2}
+                        value={tempConfig.frequency_penalty}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            frequency_penalty: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="extra_body">
+                        {t.chat.extraBody || 'Extra Body'}
+                      </Label>
+                      <textarea
+                        id="extra_body"
+                        value={tempConfig.extra_body}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            extra_body: e.target.value,
+                          }))
+                        }
+                        placeholder='{"key": "value"}'
+                        rows={3}
+                        className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1d9bf0] focus:border-transparent"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t.chat.extraBodyHint ||
+                          'Additional parameters as JSON object'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 服务连通性测试 */}
@@ -1105,6 +1409,128 @@ function ChatComponent() {
                 />
               </div>
 
+              {/* Other Parameters Collapsible Card */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowOtherParams(!showOtherParams)}
+                  className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+                >
+                  <span>{t.chat.otherParameters || 'Other Parameters'}</span>
+                  {showOtherParams ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {showOtherParams && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-slate-200 dark:border-slate-700 pt-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="decision_max_tokens">
+                        {t.chat.maxTokens || 'Max Tokens'}
+                      </Label>
+                      <Input
+                        id="decision_max_tokens"
+                        type="number"
+                        min={1}
+                        value={tempConfig.decision_max_tokens}
+                        onChange={e => {
+                          const rawValue = e.target.value.trim();
+                          setTempConfig(prev => ({
+                            ...prev,
+                            decision_max_tokens:
+                              rawValue === ''
+                                ? ''
+                                : Math.max(1, parseInt(rawValue, 10) || 1),
+                          }));
+                        }}
+                        placeholder="3000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="decision_temperature">
+                        {t.chat.temperature || 'Temperature'}
+                      </Label>
+                      <Input
+                        id="decision_temperature"
+                        type="number"
+                        step={0.1}
+                        min={0}
+                        max={2}
+                        value={tempConfig.decision_temperature}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            decision_temperature: parseFloat(e.target.value) || 0.0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="decision_top_p">
+                        {t.chat.topP || 'Top P'}
+                      </Label>
+                      <Input
+                        id="decision_top_p"
+                        type="number"
+                        step={0.01}
+                        min={0}
+                        max={1}
+                        value={tempConfig.decision_top_p}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            decision_top_p: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="decision_frequency_penalty">
+                        {t.chat.frequencyPenalty || 'Frequency Penalty'}
+                      </Label>
+                      <Input
+                        id="decision_frequency_penalty"
+                        type="number"
+                        step={0.1}
+                        min={-2}
+                        max={2}
+                        value={tempConfig.decision_frequency_penalty}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            decision_frequency_penalty:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="decision_extra_body">
+                        {t.chat.extraBody || 'Extra Body'}
+                      </Label>
+                      <textarea
+                        id="decision_extra_body"
+                        value={tempConfig.decision_extra_body}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            decision_extra_body: e.target.value,
+                          }))
+                        }
+                        placeholder='{"key": "value"}'
+                        rows={3}
+                        className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t.chat.extraBodyHint ||
+                          'Additional parameters as JSON object'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Decision Model 连通性测试 */}
               <div className="space-y-2">
                 <Button
@@ -1249,6 +1675,128 @@ function ChatComponent() {
                 </Label>
               </div>
 
+              {/* Other Parameters Collapsible Card */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowOtherParams(!showOtherParams)}
+                  className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+                >
+                  <span>{t.chat.otherParameters || 'Other Parameters'}</span>
+                  {showOtherParams ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {showOtherParams && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-slate-200 dark:border-slate-700 pt-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="chat_max_tokens">
+                        {t.chat.maxTokens || 'Max Tokens'}
+                      </Label>
+                      <Input
+                        id="chat_max_tokens"
+                        type="number"
+                        min={1}
+                        value={tempConfig.chat_max_tokens}
+                        onChange={e => {
+                          const rawValue = e.target.value.trim();
+                          setTempConfig(prev => ({
+                            ...prev,
+                            chat_max_tokens:
+                              rawValue === ''
+                                ? ''
+                                : Math.max(1, parseInt(rawValue, 10) || 1),
+                          }));
+                        }}
+                        placeholder="3000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chat_temperature">
+                        {t.chat.temperature || 'Temperature'}
+                      </Label>
+                      <Input
+                        id="chat_temperature"
+                        type="number"
+                        step={0.1}
+                        min={0}
+                        max={2}
+                        value={tempConfig.chat_temperature}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            chat_temperature: parseFloat(e.target.value) || 0.0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chat_top_p">
+                        {t.chat.topP || 'Top P'}
+                      </Label>
+                      <Input
+                        id="chat_top_p"
+                        type="number"
+                        step={0.01}
+                        min={0}
+                        max={1}
+                        value={tempConfig.chat_top_p}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            chat_top_p: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chat_frequency_penalty">
+                        {t.chat.frequencyPenalty || 'Frequency Penalty'}
+                      </Label>
+                      <Input
+                        id="chat_frequency_penalty"
+                        type="number"
+                        step={0.1}
+                        min={-2}
+                        max={2}
+                        value={tempConfig.chat_frequency_penalty}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            chat_frequency_penalty:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="chat_extra_body">
+                        {t.chat.extraBody || 'Extra Body'}
+                      </Label>
+                      <textarea
+                        id="chat_extra_body"
+                        value={tempConfig.chat_extra_body}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            chat_extra_body: e.target.value,
+                          }))
+                        }
+                        placeholder='{"key": "value"}'
+                        rows={3}
+                        className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t.chat.extraBodyHint ||
+                          'Additional parameters as JSON object'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 对话模型连通性测试 */}
               <div className="space-y-2">
                 <Button
@@ -1374,6 +1922,128 @@ function ChatComponent() {
                 />
               </div>
 
+              {/* Other Parameters Collapsible Card */}
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setShowOtherParams(!showOtherParams)}
+                  className="w-full flex items-center justify-between p-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors"
+                >
+                  <span>{t.chat.otherParameters || 'Other Parameters'}</span>
+                  {showOtherParams ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                </button>
+                {showOtherParams && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-slate-200 dark:border-slate-700 pt-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="intent_max_tokens">
+                        {t.chat.maxTokens || 'Max Tokens'}
+                      </Label>
+                      <Input
+                        id="intent_max_tokens"
+                        type="number"
+                        min={1}
+                        value={tempConfig.intent_max_tokens}
+                        onChange={e => {
+                          const rawValue = e.target.value.trim();
+                          setTempConfig(prev => ({
+                            ...prev,
+                            intent_max_tokens:
+                              rawValue === ''
+                                ? ''
+                                : Math.max(1, parseInt(rawValue, 10) || 1),
+                          }));
+                        }}
+                        placeholder="3000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intent_temperature">
+                        {t.chat.temperature || 'Temperature'}
+                      </Label>
+                      <Input
+                        id="intent_temperature"
+                        type="number"
+                        step={0.1}
+                        min={0}
+                        max={2}
+                        value={tempConfig.intent_temperature}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            intent_temperature: parseFloat(e.target.value) || 0.0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intent_top_p">
+                        {t.chat.topP || 'Top P'}
+                      </Label>
+                      <Input
+                        id="intent_top_p"
+                        type="number"
+                        step={0.01}
+                        min={0}
+                        max={1}
+                        value={tempConfig.intent_top_p}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            intent_top_p: parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intent_frequency_penalty">
+                        {t.chat.frequencyPenalty || 'Frequency Penalty'}
+                      </Label>
+                      <Input
+                        id="intent_frequency_penalty"
+                        type="number"
+                        step={0.1}
+                        min={-2}
+                        max={2}
+                        value={tempConfig.intent_frequency_penalty}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            intent_frequency_penalty:
+                              parseFloat(e.target.value) || 0,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="intent_extra_body">
+                        {t.chat.extraBody || 'Extra Body'}
+                      </Label>
+                      <textarea
+                        id="intent_extra_body"
+                        value={tempConfig.intent_extra_body}
+                        onChange={e =>
+                          setTempConfig(prev => ({
+                            ...prev,
+                            intent_extra_body: e.target.value,
+                          }))
+                        }
+                        placeholder='{"key": "value"}'
+                        rows={3}
+                        className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t.chat.extraBodyHint ||
+                          'Additional parameters as JSON object'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 意图模型连通性测试 */}
               <div className="space-y-2">
                 <Button
@@ -1438,21 +2108,56 @@ function ChatComponent() {
                     base_url: config.base_url,
                     model_name: config.model_name,
                     api_key: config.api_key || '',
+                    max_tokens: config.max_tokens ?? 3000,
+                    temperature: config.temperature ?? 0.0,
+                    top_p: config.top_p ?? 0.85,
+                    frequency_penalty: config.frequency_penalty ?? 0.2,
+                    extra_body: config.extra_body
+                      ? JSON.stringify(config.extra_body)
+                      : '{}',
                     agent_type: config.agent_type || 'glm-async',
                     agent_config_params: config.agent_config_params || {},
                     default_max_steps: config.default_max_steps ?? '',
                     layered_max_turns: config.layered_max_turns || 50,
+
                     decision_base_url: config.decision_base_url || '',
                     decision_model_name:
                       config.decision_model_name || 'glm-4.7',
                     decision_api_key: config.decision_api_key || '',
+                    decision_max_tokens: config.decision_max_tokens ?? 3000,
+                    decision_temperature:
+                      config.decision_temperature ?? 0.0,
+                    decision_top_p: config.decision_top_p ?? 0.85,
+                    decision_frequency_penalty:
+                      config.decision_frequency_penalty ?? 0.2,
+                    decision_extra_body: config.decision_extra_body
+                      ? JSON.stringify(config.decision_extra_body)
+                      : '{}',
+
                     chat_base_url: config.chat_base_url || '',
                     chat_model_name: config.chat_model_name || '',
                     chat_api_key: config.chat_api_key || '',
                     chat_enable_thinking: config.chat_enable_thinking ?? true,
+                    chat_max_tokens: config.chat_max_tokens ?? 4096,
+                    chat_temperature: config.chat_temperature ?? 1.0,
+                    chat_top_p: config.chat_top_p ?? 0.95,
+                    chat_frequency_penalty:
+                      config.chat_frequency_penalty ?? 0.2,
+                    chat_extra_body: config.chat_extra_body
+                      ? JSON.stringify(config.chat_extra_body)
+                      : '{}',
+
                     intent_base_url: config.intent_base_url || '',
                     intent_model_name: config.intent_model_name || '',
                     intent_api_key: config.intent_api_key || '',
+                    intent_max_tokens: config.intent_max_tokens ?? 4096,
+                    intent_temperature: config.intent_temperature ?? 0.7,
+                    intent_top_p: config.intent_top_p ?? 0.80,
+                    intent_frequency_penalty:
+                      config.intent_frequency_penalty ?? 0.2,
+                    intent_extra_body: config.intent_extra_body
+                      ? JSON.stringify(config.intent_extra_body)
+                      : '{}',
                   });
                 }
               }}

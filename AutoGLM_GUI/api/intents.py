@@ -35,9 +35,11 @@ async def detect_intent(request: IntentDetectRequest) -> IntentDetectResponse:
             base_url=base_url,
             api_key=api_key,
             model=model,
-            temperature=0.0,
-            max_tokens=4096,
-            enable_thinking=False,
+            temperature=config.intent_temperature,
+            top_p=config.intent_top_p,
+            max_tokens=config.intent_max_tokens,
+            frequency_penalty=config.intent_frequency_penalty,
+            extra_body=config.intent_extra_body,
         )
 
         result = await asyncio.to_thread(classifier.classify, request.message)

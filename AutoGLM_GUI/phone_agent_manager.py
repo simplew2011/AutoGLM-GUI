@@ -256,6 +256,11 @@ class PhoneAgentManager:
             base_url=effective_config.base_url,
             api_key=effective_config.api_key,
             model_name=effective_config.model_name,
+            max_tokens=effective_config.max_tokens,
+            temperature=effective_config.temperature,
+            top_p=effective_config.top_p,
+            frequency_penalty=effective_config.frequency_penalty,
+            extra_body=effective_config.extra_body,
         )
 
         # 使用实际的 device_id 创建 AgentConfig

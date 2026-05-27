@@ -90,6 +90,15 @@ export const en = {
     agentMidsceneDesc:
       'Midscene.js vision-driven, requires Node.js environment',
     agentQwenDesc: 'Adapted for Qwen3.6 series',
+    otherParameters: 'Other Parameters',
+    maxTokens: 'Max Tokens',
+    temperature: 'Temperature',
+    topP: 'Top P',
+    frequencyPenalty: 'Frequency Penalty',
+    extraBody: 'Extra Body',
+    extraBodyHint:
+      'Additional parameters as JSON object (e.g. {"key": "value"})',
+    extraBodyInvalid: 'Extra Body must be valid JSON',
   },
   deviceSidebar: {
     devices: 'Devices',

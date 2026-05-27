@@ -58,9 +58,11 @@ class IntentClassifier:
         base_url: str = "http://localhost:8000/v1",
         api_key: str = "not-needed",
         model: str = "Qwen3.6-27B",
-        temperature: float = 0.0,
-        top_p: float = 0.01,
-        max_tokens: int = 2048,
+        temperature: float = 0.7,
+        top_p: float = 0.80,
+        max_tokens: int = 4096,
+        frequency_penalty: float = 0.2,
+        extra_body: dict[str, Any] | None = None,
         max_retries: int = 3,
         enable_thinking: bool = False,
         few_shot: bool = False,
@@ -70,6 +72,8 @@ class IntentClassifier:
         self.temperature = temperature
         self.top_p = top_p
         self.max_tokens = max_tokens
+        self.frequency_penalty = frequency_penalty
+        self.extra_body = extra_body or {}
         self.max_retries = max_retries
         self.enable_thinking = enable_thinking
 
@@ -79,16 +83,7 @@ class IntentClassifier:
             self._few_shot_messages = []
 
         logger.info(
-            "IntentClassifier init: model=%s, base_url=%s, temperature=%.2f, "
-            "top_p=%.2f, max_tokens=%d, max_retries=%d, few_shot=%s (%d messages)",
-            model,
-            base_url,
-            temperature,
-            top_p,
-            max_tokens,
-            max_retries,
-            few_shot,
-            len(self._few_shot_messages),
+            f"IntentClassifier init: model: {model}, base_url: {base_url}, temperature: {temperature}, top_p: {top_p}, max_tokens: {max_tokens}, frequency_penalty: {frequency_penalty}, extra_body: {extra_body}, max_retries: {max_retries}, few_shot: {few_shot} {len(self._few_shot_messages)} messages"
         )
 
     def _build_few_shot_messages(self) -> list[dict[str, str]]:
@@ -130,16 +125,19 @@ class IntentClassifier:
                 logger.debug(
                     "classify attempt=%d/%d", attempt + 1, self.max_retries + 1
                 )
-                extra_body = {}
                 if not self.enable_thinking:
-                    extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
+                    self.extra_body.setdefault(
+                        "chat_template_kwargs", {}
+                    )["enable_thinking"] = False
+
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,  # type: ignore[arg-type]
                     temperature=self.temperature,
                     top_p=self.top_p,
                     max_tokens=self.max_tokens,
-                    extra_body=extra_body,
+                    frequency_penalty=self.frequency_penalty,
+                    extra_body=self.extra_body,
                 )
                 finish_reason = response.choices[0].finish_reason
                 if finish_reason == "length":

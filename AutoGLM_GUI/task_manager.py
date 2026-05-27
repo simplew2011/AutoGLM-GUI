@@ -683,9 +683,21 @@ class TaskManager:
             base_url=config.chat_base_url or config.base_url or "",
             api_key=config.chat_api_key or config.api_key or "EMPTY",
             model_name=config.chat_model_name or config.model_name,
+            max_tokens=config.chat_max_tokens,
+            temperature=config.chat_temperature,
+            top_p=config.chat_top_p,
+            frequency_penalty=config.chat_frequency_penalty,
+            extra_body=config.chat_extra_body,
         )
-        if not config.chat_enable_thinking:
-            model_config.extra_body["chat_template_kwargs"] = {"enable_thinking": False}
+        # The priority of 'chat_enable_thinking' is higher than 'extra_body'
+        if config.chat_enable_thinking:
+            model_config.extra_body.setdefault(
+                "chat_template_kwargs", {}
+            )["enable_thinking"] = True # vLLM
+            # model_config.extra_body.setdefault(
+            #     "enable_thinking", True) # LiteRT-LM
+        else:
+            pass
 
         agent_config = AgentConfig()
 
