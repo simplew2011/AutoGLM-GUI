@@ -35,6 +35,7 @@ class ChatAgent:
         )
 
         self._cancel_event = asyncio.Event()
+        self._pending_request: asyncio.Task[Any] | None = None
         self._context: list[dict[str, Any]] = []
         self._user_image_attachments: list[dict[str, str]] = []
         self._step_count = 0
@@ -117,17 +118,24 @@ class ChatAgent:
             if self.agent_config.verbose:
                 logger.debug(f"[ChatAgent] model_config: {self.model_config}")
 
-            # 流式调用 LLM
-            stream = await self.openai_client.chat.completions.create(
-                messages=self._context,  # type: ignore[arg-type]
-                model=self.model_config.model_name,
-                max_tokens=self.model_config.max_tokens,
-                temperature=self.model_config.temperature,
-                top_p=self.model_config.top_p,
-                frequency_penalty=self.model_config.frequency_penalty,
-                extra_body=self.model_config.extra_body,
-                stream=True,
+            # 流式调用 LLM（包装为 Task 以支持取消）
+            create_task = asyncio.ensure_future(
+                self.openai_client.chat.completions.create(
+                    messages=self._context,  # type: ignore[arg-type]
+                    model=self.model_config.model_name,
+                    max_tokens=self.model_config.max_tokens,
+                    temperature=self.model_config.temperature,
+                    top_p=self.model_config.top_p,
+                    frequency_penalty=self.model_config.frequency_penalty,
+                    extra_body=self.model_config.extra_body,
+                    stream=True,
+                )
             )
+            self._pending_request = create_task
+            try:
+                stream = await create_task
+            finally:
+                self._pending_request = None
 
             raw_content = ""
             reasoning_buffer = ""
@@ -290,6 +298,8 @@ class ChatAgent:
     async def cancel(self) -> None:
         """取消当前执行。"""
         self._cancel_event.set()
+        if self._pending_request is not None:
+            self._pending_request.cancel()
 
     def reset(self) -> None:
         """重置状态。"""
