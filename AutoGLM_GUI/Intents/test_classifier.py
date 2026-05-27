@@ -235,11 +235,13 @@ class TestPromptCoverage:
 class TestClassifierDefaults:
     def test_deterministic_parameters(self):
         clf = IntentClassifier()
-        assert clf.temperature == 0.0, (
-            "temperature should be 0 for deterministic output"
+        assert clf.temperature == 0.7, (
+            "temperature should be 0.7 for intent classification"
         )
-        assert clf.top_p == 0.01, "top_p should be 0.01 for deterministic output"
-        assert clf.max_tokens == 2048, "max_tokens should be 2048 for classification"
+        assert clf.top_p == 0.80, "top_p should be 0.80 for intent classification"
+        assert clf.max_tokens == 4096, (
+            "max_tokens should be 4096 for intent classification"
+        )
 
 
 if __name__ == "__main__":

@@ -282,7 +282,7 @@ function ChatComponent() {
     agent_config_params: {} as Record<string, unknown>,
     default_max_steps: 100 as number | '',
     layered_max_turns: 50,
-    
+
     decision_base_url: '',
     decision_model_name: '',
     decision_api_key: '',
@@ -307,7 +307,7 @@ function ChatComponent() {
     intent_api_key: '',
     intent_max_tokens: 4096 as number | '',
     intent_temperature: 0.7,
-    intent_top_p: 0.80,
+    intent_top_p: 0.8,
     intent_frequency_penalty: 0.2,
     intent_extra_body: '{}',
   });
@@ -358,7 +358,7 @@ function ChatComponent() {
           intent_api_key: data.intent_api_key || undefined,
           intent_max_tokens: data.intent_max_tokens ?? 4096,
           intent_temperature: data.intent_temperature ?? 0.7,
-          intent_top_p: data.intent_top_p ?? 0.80,
+          intent_top_p: data.intent_top_p ?? 0.8,
           intent_frequency_penalty: data.intent_frequency_penalty ?? 0.2,
           intent_extra_body: data.intent_extra_body || {},
         });
@@ -407,7 +407,7 @@ function ChatComponent() {
           intent_api_key: data.intent_api_key || '',
           intent_max_tokens: data.intent_max_tokens ?? 4096,
           intent_temperature: data.intent_temperature ?? 0.7,
-          intent_top_p: data.intent_top_p ?? 0.80,
+          intent_top_p: data.intent_top_p ?? 0.8,
           intent_frequency_penalty: data.intent_frequency_penalty ?? 0.2,
           intent_extra_body: data.intent_extra_body
             ? JSON.stringify(data.intent_extra_body)
@@ -466,9 +466,7 @@ function ChatComponent() {
     }
 
     // Parse extra_body JSON for each model type
-    const parseExtraBody = (
-      raw: string,
-    ): Record<string, unknown> | null => {
+    const parseExtraBody = (raw: string): Record<string, unknown> | null => {
       if (!raw || !raw.trim()) return {};
       try {
         return JSON.parse(raw);
@@ -598,7 +596,7 @@ function ChatComponent() {
         decision_top_p: tempConfig.decision_top_p,
         decision_frequency_penalty: tempConfig.decision_frequency_penalty,
         decision_extra_body: decisionExtraBody,
-        
+
         chat_base_url: tempConfig.chat_base_url || undefined,
         chat_model_name: tempConfig.chat_model_name || undefined,
         chat_api_key: tempConfig.chat_api_key || undefined,
@@ -1469,7 +1467,8 @@ function ChatComponent() {
                         onChange={e =>
                           setTempConfig(prev => ({
                             ...prev,
-                            decision_temperature: parseFloat(e.target.value) || 0.0,
+                            decision_temperature:
+                              parseFloat(e.target.value) || 0.0,
                           }))
                         }
                       />
@@ -1982,7 +1981,8 @@ function ChatComponent() {
                         onChange={e =>
                           setTempConfig(prev => ({
                             ...prev,
-                            intent_temperature: parseFloat(e.target.value) || 0.0,
+                            intent_temperature:
+                              parseFloat(e.target.value) || 0.0,
                           }))
                         }
                       />
@@ -2133,8 +2133,7 @@ function ChatComponent() {
                       config.decision_model_name || 'glm-4.7',
                     decision_api_key: config.decision_api_key || '',
                     decision_max_tokens: config.decision_max_tokens ?? 3000,
-                    decision_temperature:
-                      config.decision_temperature ?? 0.0,
+                    decision_temperature: config.decision_temperature ?? 0.0,
                     decision_top_p: config.decision_top_p ?? 0.85,
                     decision_frequency_penalty:
                       config.decision_frequency_penalty ?? 0.2,
@@ -2160,7 +2159,7 @@ function ChatComponent() {
                     intent_api_key: config.intent_api_key || '',
                     intent_max_tokens: config.intent_max_tokens ?? 4096,
                     intent_temperature: config.intent_temperature ?? 0.7,
-                    intent_top_p: config.intent_top_p ?? 0.80,
+                    intent_top_p: config.intent_top_p ?? 0.8,
                     intent_frequency_penalty:
                       config.intent_frequency_penalty ?? 0.2,
                     intent_extra_body: config.intent_extra_body

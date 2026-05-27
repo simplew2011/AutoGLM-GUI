@@ -734,12 +734,12 @@ export interface ConfigSaveRequest {
   // Agent 执行配置
   default_max_steps?: number | null;
   layered_max_turns?: number;
-  
+
   // 决策模型配置
   decision_base_url?: string;
   decision_model_name?: string;
   decision_api_key?: string;
-  
+
   decision_max_tokens?: number;
   decision_temperature?: number;
   decision_top_p?: number;
@@ -751,7 +751,7 @@ export interface ConfigSaveRequest {
   chat_model_name?: string;
   chat_api_key?: string;
   chat_enable_thinking?: boolean;
-  
+
   chat_max_tokens?: number;
   chat_temperature?: number;
   chat_top_p?: number;

@@ -295,7 +295,7 @@ class AsyncGLMAgent(AsyncAgentBase, AsyncAgent):
     async def _stream_openai(
         self, messages: list[dict[str, Any]]
     ) -> AsyncGenerator[dict[str, str], None]:
-        """流式调用 OpenAI，yield thinking chunks。"""        
+        """流式调用 OpenAI，yield thinking chunks。"""
         stream = await self.openai_client.chat.completions.create(
             messages=messages,  # type: ignore[arg-type]
             model=self.model_config.model_name,

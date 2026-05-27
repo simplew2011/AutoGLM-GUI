@@ -302,12 +302,12 @@ class ConfigLayer:
     # Agent 执行配置
     default_max_steps: int | None = None
     layered_max_turns: int | None = None
-    
+
     # 决策模型配置
     decision_base_url: str | None = None
     decision_model_name: str | None = None
     decision_api_key: str | None = None
-    
+
     decision_max_tokens: int | None = None
     decision_temperature: float | None = None
     decision_top_p: float | None = None
@@ -1196,17 +1196,23 @@ class UnifiedConfigManager:
         os.environ["AUTOGLM_DECISION_MAX_TOKENS"] = str(config.decision_max_tokens)
         os.environ["AUTOGLM_DECISION_TEMPERATURE"] = str(config.decision_temperature)
         os.environ["AUTOGLM_DECISION_TOP_P"] = str(config.decision_top_p)
-        os.environ["AUTOGLM_DECISION_FREQUENCY_PENALTY"] = str(config.decision_frequency_penalty)
+        os.environ["AUTOGLM_DECISION_FREQUENCY_PENALTY"] = str(
+            config.decision_frequency_penalty
+        )
 
         os.environ["AUTOGLM_CHAT_MAX_TOKENS"] = str(config.chat_max_tokens)
         os.environ["AUTOGLM_CHAT_TEMPERATURE"] = str(config.chat_temperature)
         os.environ["AUTOGLM_CHAT_TOP_P"] = str(config.chat_top_p)
-        os.environ["AUTOGLM_CHAT_FREQUENCY_PENALTY"] = str(config.chat_frequency_penalty)
+        os.environ["AUTOGLM_CHAT_FREQUENCY_PENALTY"] = str(
+            config.chat_frequency_penalty
+        )
 
         os.environ["AUTOGLM_INTENT_MAX_TOKENS"] = str(config.intent_max_tokens)
         os.environ["AUTOGLM_INTENT_TEMPERATURE"] = str(config.intent_temperature)
         os.environ["AUTOGLM_INTENT_TOP_P"] = str(config.intent_top_p)
-        os.environ["AUTOGLM_INTENT_FREQUENCY_PENALTY"] = str(config.intent_frequency_penalty)
+        os.environ["AUTOGLM_INTENT_FREQUENCY_PENALTY"] = str(
+            config.intent_frequency_penalty
+        )
 
         logger.debug("Configuration synced to environment variables")
 

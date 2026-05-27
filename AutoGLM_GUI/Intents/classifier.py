@@ -126,9 +126,9 @@ class IntentClassifier:
                     "classify attempt=%d/%d", attempt + 1, self.max_retries + 1
                 )
                 if not self.enable_thinking:
-                    self.extra_body.setdefault(
-                        "chat_template_kwargs", {}
-                    )["enable_thinking"] = False
+                    self.extra_body.setdefault("chat_template_kwargs", {})[
+                        "enable_thinking"
+                    ] = False
 
                 response = self.client.chat.completions.create(
                     model=self.model,

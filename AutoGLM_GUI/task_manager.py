@@ -691,9 +691,9 @@ class TaskManager:
         )
         # The priority of 'chat_enable_thinking' is higher than 'extra_body'
         if config.chat_enable_thinking:
-            model_config.extra_body.setdefault(
-                "chat_template_kwargs", {}
-            )["enable_thinking"] = True # vLLM
+            model_config.extra_body.setdefault("chat_template_kwargs", {})[
+                "enable_thinking"
+            ] = True  # vLLM
             # model_config.extra_body.setdefault(
             #     "enable_thinking", True) # LiteRT-LM
         else:
