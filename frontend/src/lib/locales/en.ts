@@ -99,6 +99,8 @@ export const en = {
     extraBodyHint:
       'Additional parameters as JSON object (e.g. {"key": "value"})',
     extraBodyInvalid: 'Extra Body must be valid JSON',
+    agentMobizenDesc:
+      'Based on MobiZen-GUI model, uses tool_call format for GUI automation',
   },
   deviceSidebar: {
     devices: 'Devices',
