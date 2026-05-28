@@ -9,20 +9,21 @@ This matches the original MobiZen-GUI QwenMessageBuilder.build_messages().
 
 from __future__ import annotations
 
-import asyncio
 import json
+import time
+import asyncio
 import traceback
-from collections.abc import AsyncGenerator
 from typing import Any
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 
+from AutoGLM_GUI.logger import logger
+from AutoGLM_GUI.trace import trace_span
+from AutoGLM_GUI.prompt_config import get_messages
 from AutoGLM_GUI.agents.base import AsyncAgentBase
 from AutoGLM_GUI.agents.protocols import AsyncAgent
 from AutoGLM_GUI.config import AgentConfig, ModelConfig
 from AutoGLM_GUI.device_protocol import DeviceProtocol
-from AutoGLM_GUI.logger import logger
-from AutoGLM_GUI.prompt_config import get_messages
-from AutoGLM_GUI.trace import trace_span
+
 
 from .parser import MobiZenParser
 from .prompts import MOBIZEN_SYSTEM_PROMPT
@@ -310,6 +311,10 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             from AutoGLM_GUI.actions import ActionResult
 
             result = ActionResult(success=False, should_finish=True, message=str(e))
+        
+        if self._step_count <= 1:
+            # same as mobizen official process
+            time.sleep(3)
 
         # 6. Record step in history (for next step's text compression)
         self._mobizen_history.append(
