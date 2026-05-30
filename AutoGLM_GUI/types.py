@@ -97,7 +97,13 @@ class GLMAgentSpecificConfig(TypedDict, total=False):
     pass
 
 
-AgentSpecificConfig = MAIAgentSpecificConfig | GLMAgentSpecificConfig
+class VaphoneAgentSpecificConfig(TypedDict, total=False):
+    pass
+
+
+AgentSpecificConfig = (
+    MAIAgentSpecificConfig | GLMAgentSpecificConfig | VaphoneAgentSpecificConfig
+)
 
 
 class TextContent(TypedDict):

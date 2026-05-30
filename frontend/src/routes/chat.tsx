@@ -139,6 +139,13 @@ const AGENT_PRESETS = [
     icon: Zap,
     defaultConfig: {},
   },
+  {
+    name: 'vaphone',
+    displayName: 'VAPhone Agent',
+    descriptionKey: 'agentVaphoneDesc',
+    icon: Zap,
+    defaultConfig: {},
+  },
 ] as const;
 
 // 决策模型预设配置（与视觉模型保持一致）

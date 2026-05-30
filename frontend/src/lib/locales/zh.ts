@@ -94,6 +94,7 @@ export const zh = {
       '以 JSON 对象形式传递的额外参数（如: {"chat_template_kwargs":{"enable_thinking":false}} ）',
     extraBodyInvalid: 'Extra Body 必须是合法的 JSON',
     agentMobizenDesc: '基于MobiZen-GUI模型，使用tool_call格式进行GUI自动化操作',
+    agentVaphoneDesc: '基于VAPhone模型',
   },
   deviceSidebar: {
     devices: '设备',
