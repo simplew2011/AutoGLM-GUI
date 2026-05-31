@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import copy
 import traceback
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -64,6 +65,21 @@ class AsyncGLMAgent(AsyncAgentBase, AsyncAgent):
 
     def _get_default_system_prompt(self, lang: str) -> str:
         return get_system_prompt(lang)
+    
+    def _sanitize_messages_for_log(
+        self, messages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        sanitized = copy.deepcopy(messages)
+        for msg in sanitized:
+            if isinstance(msg.get("content"), list):
+                for item in msg["content"]:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        url = item.get("image_url", {}).get("url", "")
+                        if "base64," in url:
+                            item["image_url"]["url"] = (
+                                url.split("base64,")[0] + "base64_content"
+                            )
+        return sanitized
 
     def _prepare_initial_context(
         self,
@@ -151,6 +167,7 @@ class AsyncGLMAgent(AsyncAgentBase, AsyncAgent):
                 )
             )
 
+        logger.info(f"self._context: {self._sanitize_messages_for_log(self._context)}")
         # 3. 流式调用 OpenAI
         image_count = _count_image_parts(self._context)
         if image_count < 1:
@@ -294,6 +311,26 @@ class AsyncGLMAgent(AsyncAgentBase, AsyncAgent):
                     f"<think>{thinking}</think><answer>{action_str}</answer>"
                 )
             )
+
+        # 6.5. 检测需要用户交互的 action (Take_over / Interact)
+        interaction_actions = ("Take_over", "Interact")
+        if action.get("action") in interaction_actions:
+            if self.agent_config.verbose:
+                logger.debug(f"Waiting for user input after {action.get('action')}")
+            yield {
+                "type": "step",
+                "data": {
+                    "step": self._step_count,
+                    "thinking": thinking,
+                    "action": action,
+                    "success": result.success,
+                    "finished": False,
+                    "waiting_for_input": True,
+                    "message": result.message or action.get("message"),
+                    "screenshot": screenshot.base64_data if screenshot else None,
+                },
+            }
+            return
 
         # 7. 检查完成
         finished = action.get("_metadata") == "finish" or result.should_finish

@@ -2399,6 +2399,7 @@ export function ChatComponent() {
                     isConfigured={!!config?.base_url}
                     isVisible={currentDevice.id === currentDeviceId}
                     unlimitedStepsEnabled={config?.default_max_steps === null}
+                    agentType={config?.agent_type}
                   />
                 </div>
               )}
