@@ -7,6 +7,7 @@ import contextlib
 import inspect
 import json
 import copy
+import os
 import threading
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -268,7 +269,7 @@ async def chat(device_id: str, message: str) -> str:
     from AutoGLM_GUI.phone_agent_manager import PhoneAgentManager
     from AutoGLM_GUI.prompts import MCP_SYSTEM_PROMPT_ZH
 
-    mcp_max_steps = 10
+    mcp_max_steps = int(os.getenv("AUTOGLM_LAYERED_MAX_STEPS", "20"))
 
     with trace_span(
         "layered.tool.chat",

@@ -1,6 +1,7 @@
 """MCP (Model Context Protocol) tools for AutoGLM-GUI."""
 
 import asyncio
+import os
 from typing import Any, cast
 
 from typing_extensions import TypedDict
@@ -25,7 +26,7 @@ class ChatResult(TypedDict):
 mcp = FastMCP("AutoGLM-GUI MCP Server")
 
 # MCP-specific step limit
-MCP_MAX_STEPS = 5
+MCP_MAX_STEPS = int(os.getenv("AUTOGLM_MCP_MAX_STEPS", "5"))
 
 
 @mcp.tool()
