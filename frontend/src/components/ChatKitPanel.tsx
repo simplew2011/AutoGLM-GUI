@@ -72,6 +72,7 @@ interface ChatKitPanelProps {
 interface ExecutionStep {
   id: string;
   type: 'user' | 'thinking' | 'tool_call' | 'tool_result' | 'assistant';
+  stepNumber: number;
   content: string;
   toolName?: string;
   toolArgs?: Record<string, unknown>;
@@ -155,9 +156,11 @@ function reconcileTaskRun(
 }
 
 function buildExecutionSteps(
-  events: TaskEventRecordResponse[]
+  events: TaskEventRecordResponse[],
+  startStepNumber: number = 1
 ): ExecutionStep[] {
   const steps: ExecutionStep[] = [];
+  let stepCount = 0;
 
   events.forEach(event => {
     const payload = event.payload;
@@ -165,9 +168,11 @@ function buildExecutionSteps(
     if (event.event_type === 'tool_call') {
       const toolName =
         typeof payload.tool_name === 'string' ? payload.tool_name : 'unknown';
+      stepCount++;
       steps.push({
         id: `step-${event.task_id}-${event.seq}`,
         type: 'tool_call',
+        stepNumber: startStepNumber + stepCount - 1,
         content:
           toolName === 'chat'
             ? '发送指令给 Phone Agent'
@@ -183,9 +188,11 @@ function buildExecutionSteps(
     } else if (event.event_type === 'tool_result') {
       const toolName =
         typeof payload.tool_name === 'string' ? payload.tool_name : 'unknown';
+      stepCount++;
       steps.push({
         id: `step-${event.task_id}-${event.seq}`,
         type: 'tool_result',
+        stepNumber: startStepNumber + stepCount - 1,
         content:
           toolName === 'chat' ? 'Phone Agent 执行结果' : `${toolName} 结果`,
         toolName,
@@ -204,9 +211,10 @@ function buildExecutionSteps(
 
 function buildAssistantMessage(
   task: TaskRunResponse,
-  events: TaskEventRecordResponse[]
+  events: TaskEventRecordResponse[],
+  startStepNumber: number = 1
 ): Message {
-  const steps = buildExecutionSteps(events);
+  const steps = buildExecutionSteps(events, startStepNumber);
   let content = task.final_message || task.error_message || '';
 
   for (const event of events) {
@@ -261,7 +269,8 @@ function buildAssistantMessage(
 
 function buildMessagePair(
   task: TaskRunResponse,
-  events: TaskEventRecordResponse[]
+  events: TaskEventRecordResponse[],
+  startStepNumber: number = 1
 ): Message[] {
   return [
     {
@@ -270,7 +279,7 @@ function buildMessagePair(
       content: task.input_text,
       timestamp: new Date(task.created_at),
     },
-    buildAssistantMessage(task, events),
+    buildAssistantMessage(task, events, startStepNumber),
   ];
 }
 
@@ -474,11 +483,17 @@ export function ChatKitPanel({
         new Date(left.created_at).getTime() -
         new Date(right.created_at).getTime()
     );
-    setMessages(
-      orderedTasks.flatMap(task =>
-        buildMessagePair(task, taskEventsRef.current[task.id] || [])
-      )
-    );
+    let cumulativeSteps = 0;
+    const allMessages = orderedTasks.flatMap(task => {
+      const pair = buildMessagePair(
+        task,
+        taskEventsRef.current[task.id] || [],
+        cumulativeSteps + 1
+      );
+      cumulativeSteps += pair[1]?.steps?.length ?? 0;
+      return pair;
+    });
+    setMessages(allMessages);
   }, []);
 
   const attachTaskStream = React.useCallback(
@@ -957,7 +972,7 @@ export function ChatKitPanel({
                                       )}
                                     </div>
                                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                                      Step {idx + 1}: {step.content}
+                                      Step {step.stepNumber}: {step.content}
                                     </span>
                                   </div>
                                   {step.isExpanded ? (
