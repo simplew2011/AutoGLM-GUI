@@ -63,21 +63,6 @@ class AsyncMAIAgent(AsyncAgentBase):
     def _get_default_system_prompt(self, lang: str) -> str:
         return MAI_MOBILE_SYSTEM_PROMPT
 
-    def _sanitize_messages_for_log(
-        self, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        sanitized = copy.deepcopy(messages)
-        for msg in sanitized:
-            if isinstance(msg.get("content"), list):
-                for item in msg["content"]:
-                    if isinstance(item, dict) and item.get("type") == "image_url":
-                        url = item.get("image_url", {}).get("url", "")
-                        if "base64," in url:
-                            item["image_url"]["url"] = (
-                                url.split("base64,")[0] + "base64_content"
-                            )
-        return sanitized
-
     def _prepare_initial_context(
         self,
         task: str,

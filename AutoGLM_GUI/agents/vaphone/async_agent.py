@@ -279,14 +279,17 @@ class AsyncVaphoneAgent(AsyncAgentBase, AsyncAgent):
                 new_summary = parsed_action.get("summary", "")
                 if new_summary:
                     self._running_summary = self.parser.clean_summary(new_summary)
-
+                
+                if self.agent_config.verbose:
+                    logger.debug(f"raw_content: \n\n {raw_content}\n\n")
+                    logger.debug(f"thinking: \n\n {thinking}\n\n")
+                    logger.debug(f"parsed_action: \n\n {thinking}\n\n")
+                    logger.debug(f"action: \n\n {action}\n\n")
+   
             except Exception as e:
-                logger.warning(f"Failed to parse/convert action: {e}")
+                logger.warning(f"Failed to parse/convert action: {e}, raw_content: {raw_content}")
                 action = {"_metadata": "finish", "message": str(e)}
 
-            if self.agent_config.verbose:
-                logger.debug(f"raw_content: \n\n {raw_content}\n\n")
-                logger.debug(f"thinking: \n\n {thinking}\n\n")
 
         # 5. Execute action
         try:
@@ -362,7 +365,7 @@ class AsyncVaphoneAgent(AsyncAgentBase, AsyncAgent):
 
         buffer = ""
         end_marker = "</THINK>"  # noqa: S105
-        start_markers = ["<THINK>", "<think>", "<THINK ", "<think "]
+        start_markers = ["<THINK>", "<think>", "<THINK ", "<think ", "<TINK>"]
         after_think = False
 
         try:

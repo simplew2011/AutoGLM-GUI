@@ -87,21 +87,6 @@ class AsyncAgentBase(ABC):
     def _get_default_system_prompt(self, lang: str) -> str:
         """返回默认 system prompt。"""
         ...
-        
-    def _sanitize_messages_for_log(
-        self, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        sanitized = copy.deepcopy(messages)
-        for msg in sanitized:
-            if isinstance(msg.get("content"), list):
-                for item in msg["content"]:
-                    if isinstance(item, dict) and item.get("type") == "image_url":
-                        url = item.get("image_url", {}).get("url", "")
-                        if "base64," in url:
-                            item["image_url"]["url"] = (
-                                url.split("base64,")[0] + "base64_content"
-                            )
-        return sanitized
 
     @abstractmethod
     def _prepare_initial_context(
@@ -123,8 +108,23 @@ class AsyncAgentBase(ABC):
         raise NotImplementedError
         yield  # pragma: no cover — make Pyright see this as async generator
 
-    # ==================== 共享逻辑 ====================
 
+    def _sanitize_messages_for_log(
+        self, messages: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        sanitized = copy.deepcopy(messages)
+        for msg in sanitized:
+            if isinstance(msg.get("content"), list):
+                for item in msg["content"]:
+                    if isinstance(item, dict) and item.get("type") == "image_url":
+                        url = item.get("image_url", {}).get("url", "")
+                        if "base64," in url:
+                            item["image_url"]["url"] = (
+                                url.split("base64,")[0] + "base64_content"
+                            )
+        return sanitized
+    
+    # ==================== 共享逻辑 ====================
     async def stream(
         self, task: str, *, continue_with: str | None = None
     ) -> AsyncIterator[dict[str, Any]]:
