@@ -312,6 +312,36 @@ def _create_mobizen_agent(
 register_agent("mobizen", _create_mobizen_agent)
 
 
+def _create_vaphone_agent(
+    model_config: ModelConfig,
+    agent_config: AgentConfig,
+    agent_specific_config: AgentSpecificConfig,  # noqa: ARG001
+    device: DeviceProtocol,
+    takeover_callback: Callable[..., Any] | None = None,
+    confirmation_callback: Callable[..., Any] | None = None,
+) -> AsyncAgent:
+    """Create AsyncVaphoneAgent instance.
+
+    Uses VAPhone tab-separated action format:
+    - Chinese system prompt embedded as user text content (no system role)
+    - <THINK> tag for thinking, tab-separated key:value for actions
+    - Summary-based history (only latest model-generated summary)
+    - 0-1000 coordinate space with 9 action types
+    """
+    from .vaphone.async_agent import AsyncVaphoneAgent
+
+    return AsyncVaphoneAgent(  # type: ignore[return-value]
+        model_config=model_config,
+        agent_config=agent_config,
+        device=device,
+        confirmation_callback=confirmation_callback,
+        takeover_callback=takeover_callback,
+    )
+
+
+register_agent("vaphone", _create_vaphone_agent)
+
+
 def _create_chat_agent(
     model_config: ModelConfig,
     agent_config: AgentConfig,
