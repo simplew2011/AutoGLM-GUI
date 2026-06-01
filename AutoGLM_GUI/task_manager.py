@@ -902,6 +902,8 @@ class TaskManager:
                 self._abort_handlers[task_id] = run.cancel
                 logger.info(f"[Layered] start_run OK, task_id={task_id}, session_id={session_id}")
 
+                last_tool_result = ""
+                event_type = ""
                 async for event in run.stream_events():
                     event_type = str(event["type"])
                     event_payload = dict(event.get("payload", {}))
@@ -920,6 +922,9 @@ class TaskManager:
                         sub_steps = event_payload.get("steps", 0)
                         if isinstance(sub_steps, (int, float)):
                             step_count += int(sub_steps)
+                        result_str = event_payload.get("result", "")
+                        if isinstance(result_str, str) and result_str:
+                            last_tool_result = result_str[:500]
                     elif event_type == "done":
                         final_message = str(event_payload.get("content", ""))
                         final_status = (
@@ -935,6 +940,9 @@ class TaskManager:
                                 else "error",
                             )
                         )
+                        if not final_message and event_payload.get("success", False):
+                            final_message = last_tool_result or "Task completed (no summary)"
+                            logger.info(f"[Layered] done with empty content, using last tool_result: {final_message[:200]}")
                     elif event_type == "error":
                         final_message = str(event_payload.get("message", "Task failed"))
                         final_status = TaskStatus.FAILED.value
@@ -957,6 +965,11 @@ class TaskManager:
                 final_message = run.final_output
 
             if not final_message:
+                logger.warning(
+                    f"[Layered] no terminal message, last_event={event_type}, "
+                    f"run_final_output={repr(run.final_output) if run else None}, "
+                    f"task_id={task_id}"
+                )
                 final_message = "Task finished without a final response"
                 final_status = TaskStatus.FAILED.value
                 stop_reason = "error"

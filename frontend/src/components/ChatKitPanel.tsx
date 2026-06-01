@@ -214,9 +214,9 @@ function buildAssistantMessage(
     if (event.event_type === 'message' && typeof payload.content === 'string') {
       content = payload.content;
     } else if (event.event_type === 'done') {
-      if (typeof payload.content === 'string') {
+      if (typeof payload.content === 'string' && payload.content) {
         content = payload.content;
-      } else if (typeof payload.message === 'string') {
+      } else if (typeof payload.message === 'string' && payload.message) {
         content = payload.message;
       }
     } else if (
