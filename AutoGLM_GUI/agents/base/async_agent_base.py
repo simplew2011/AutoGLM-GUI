@@ -88,7 +88,6 @@ class AsyncAgentBase(ABC):
         """返回默认 system prompt。"""
         ...
         
-    @abstractmethod
     def _sanitize_messages_for_log(
         self, messages: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:

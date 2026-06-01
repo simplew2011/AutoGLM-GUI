@@ -89,11 +89,6 @@ class AsyncVaphoneAgent(AsyncAgentBase, AsyncAgent):
         self._info_question = None
         self._info_reply = None
 
-    def _sanitize_messages_for_log(
-        self, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        return super()._sanitize_messages_for_log(messages)
-
     async def _execute_step(self) -> AsyncGenerator[dict[str, Any], None]:
         """Execute a single step.
 
