@@ -957,7 +957,6 @@ class TaskManager:
                 final_message = run.final_output
 
             if not final_message:
-            logger.warning(f"[Layered] NO terminal event, task_id={task_id}, last_event_type={event_type}, final_message={final_message!r}")
                 final_message = "Task finished without a final response"
                 final_status = TaskStatus.FAILED.value
                 stop_reason = "error"

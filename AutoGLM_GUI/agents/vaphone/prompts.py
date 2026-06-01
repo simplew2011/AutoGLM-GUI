@@ -42,6 +42,8 @@ SYSTEM_PROMPT = f"""
 例如：action:SLIDE\tpoint1:x1,y1\tpoint2:x2,y2
 8. LONGPRESS：长按手机屏幕坐标，需包含长按的坐标位置 point。
 例如：action:LONGPRESS\tpoint:x,y
+9. BACK：导航返回到上一个屏幕或关闭当前对话框。相当于按下 Android 的返回按钮。使用此操作可以从更深的屏幕返回、关闭弹出窗口或退出当前上下文。
+10. HOME：回到系统桌面的操作，相当于按下 Android 主屏幕按钮。使用此操作可退出当前应用并返回启动器，或从已知状态启动新任务。
 \n
 """
 

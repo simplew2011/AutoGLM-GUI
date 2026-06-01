@@ -339,12 +339,12 @@ async def chat(device_id: str, message: str) -> str:
                             "error_kind": "max_steps",
                         }
                     )
-                    context_json = json.dumps(
-                        _sanitize_messages_for_log(agent.context), ensure_ascii=False, indent=2
-                    )
+                    # context_json = json.dumps(
+                    #     _sanitize_messages_for_log(agent.context), ensure_ascii=False, indent=2
+                    # )
                     return json.dumps(
                         {
-                            "result": f"⚠️ 已达到最大步数限制（{mcp_max_steps}步）。视觉模型可能遇到了困难，任务未完成。\n\n执行历史:\n{context_json}\n\n建议: 请重新规划任务或将其拆分为更小的子任务。",
+                            "result": f"⚠️ 已达到最大步数限制（{mcp_max_steps}步）。视觉模型可能遇到了困难，任务未完成。\n\n建议: 请重新规划任务或将其拆分为更小的子任务。",
                             "steps": mcp_max_steps,
                             "success": False,
                         },
