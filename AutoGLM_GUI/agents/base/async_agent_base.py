@@ -153,6 +153,10 @@ class AsyncAgentBase(ABC):
             self._context.append(
                 MessageBuilder.create_user_message(continue_with)
             )
+            # Notify vaphone-style agents that have an info-reply mechanism
+            set_info_reply = getattr(self, "set_info_reply", None)
+            if callable(set_info_reply):
+                set_info_reply(continue_with)
 
         with trace_span(
             "agent.stream",
