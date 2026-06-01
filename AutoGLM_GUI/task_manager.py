@@ -38,7 +38,7 @@ class TaskManager:
         self._cancel_requested: set[str] = set()
         self._executors: dict[str, TaskExecutor] = {}
         self._started = False
-        self._takeover_sessions: dict[str, bool] = {}
+        self._active_sessions: set[str] = set()
         self._shutdown = False
         # session_id -> ChatAgent instance，用于对话模式多轮对话上下文保持
         self._chat_agents: dict[str, Any] = {}
@@ -541,8 +541,9 @@ class TaskManager:
                     event_type = ""
                     event_data: dict[str, Any] = {}
 
-                    # 检查是否有待继续的 takeover
-                    is_continue = self._takeover_sessions.pop(session_id, False)
+                    # 同 session 的后续任务都继续执行，不重置上下文
+                    is_continue = session_id in self._active_sessions
+                    self._active_sessions.add(session_id)
                     async for event in agent.stream(
                         task["input_text"],
                         continue_with=task["input_text"] if is_continue else None,
@@ -577,7 +578,6 @@ class TaskManager:
                         final_message = str(event_data.get("message", ""))
                         final_status = TaskStatus.SUCCEEDED.value
                         stop_reason = "takeover"
-                        step_count = int(event_data.get("steps", step_count))
                         self._takeover_sessions[session_id] = True
                     elif event_type == "done":
                         final_message = str(event_data.get("message", ""))

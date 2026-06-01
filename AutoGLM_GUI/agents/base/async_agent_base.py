@@ -156,6 +156,8 @@ class AsyncAgentBase(ABC):
             set_info_reply = getattr(self, "set_info_reply", None)
             if callable(set_info_reply):
                 set_info_reply(continue_with)
+            if hasattr(self, "_task"):
+                self._task = continue_with
 
         with trace_span(
             "agent.stream",
