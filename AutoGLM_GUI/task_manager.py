@@ -578,7 +578,6 @@ class TaskManager:
                         final_message = str(event_data.get("message", ""))
                         final_status = TaskStatus.SUCCEEDED.value
                         stop_reason = "takeover"
-                        self._takeover_sessions[session_id] = True
                     elif event_type == "done":
                         final_message = str(event_data.get("message", ""))
                         final_status = (
@@ -901,6 +900,7 @@ class TaskManager:
                     device_id=str(task["device_id"]),
                 )
                 self._abort_handlers[task_id] = run.cancel
+                logger.info(f"[Layered] start_run OK, task_id={task_id}, session_id={session_id}")
 
                 async for event in run.stream_events():
                     event_type = str(event["type"])
@@ -914,6 +914,7 @@ class TaskManager:
                         replay_source=metrics_source,
                         task=task,
                     )
+                    logger.debug(f"[Layered] event_type={event_type} payload_keys={sorted(event_payload.keys())}")
 
                     if event_type == "tool_result":
                         sub_steps = event_payload.get("steps", 0)
@@ -956,6 +957,7 @@ class TaskManager:
                 final_message = run.final_output
 
             if not final_message:
+            logger.warning(f"[Layered] NO terminal event, task_id={task_id}, last_event_type={event_type}, final_message={final_message!r}")
                 final_message = "Task finished without a final response"
                 final_status = TaskStatus.FAILED.value
                 stop_reason = "error"

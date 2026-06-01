@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import inspect
 import json
+import copy
 import threading
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -77,8 +78,25 @@ PLANNER_INSTRUCTIONS = """## 核心目标
 2. `chat(device_id, message)`:
    - 发送操作指令（如"点击红色按钮"）。
    - 发送查询问题（如"那个验证码是多少？"）。
+
+## 跨应用 (Cross-app)
+1. 如果需要从一个应用切换至另一个应用，需先回到桌面，再进入新应用。如：任务要求在淘宝和京东对商品进行比价，在淘宝完成价格收集后，先回到桌面，再启动京东进行价格收集。
 """
 
+def _sanitize_messages_for_log(
+    messages: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    sanitized = copy.deepcopy(messages)
+    for msg in sanitized:
+        if isinstance(msg.get("content"), list):
+            for item in msg["content"]:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    url = item.get("image_url", {}).get("url", "")
+                    if "base64," in url:
+                        item["image_url"]["url"] = (
+                            url.split("base64,")[0] + "base64_content"
+                        )
+    return sanitized
 
 class TracedSQLiteSession(SQLiteSession):
     """SQLiteSession wrapper that exposes planner memory operations as spans."""
@@ -250,7 +268,7 @@ async def chat(device_id: str, message: str) -> str:
     from AutoGLM_GUI.phone_agent_manager import PhoneAgentManager
     from AutoGLM_GUI.prompts import MCP_SYSTEM_PROMPT_ZH
 
-    mcp_max_steps = 5
+    mcp_max_steps = 10
 
     with trace_span(
         "layered.tool.chat",
@@ -322,7 +340,7 @@ async def chat(device_id: str, message: str) -> str:
                         }
                     )
                     context_json = json.dumps(
-                        agent.context, ensure_ascii=False, indent=2
+                        _sanitize_messages_for_log(agent.context), ensure_ascii=False, indent=2
                     )
                     return json.dumps(
                         {
