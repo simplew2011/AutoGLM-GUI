@@ -159,6 +159,7 @@ class AsyncVaphoneAgent(AsyncAgentBase, AsyncAgent):
 
             user_text = (
                 f"\n已知用户指令为：{self._task}\n"
+                f"指令结束\n\n"
                 f"已知已经执行过的历史动作如下：{history_display}\n"
                 f"{info_text}"
                 f"当前手机屏幕截图如下：\n"
@@ -278,6 +279,8 @@ class AsyncVaphoneAgent(AsyncAgentBase, AsyncAgent):
                 # Update running summary for next step
                 new_summary = parsed_action.get("summary", "")
                 if new_summary:
+                    # cleaned = self.parser.clean_summary(new_summary)
+                    # self._running_summary += f"\nstep{self._step_count}: {cleaned}"
                     self._running_summary = self.parser.clean_summary(new_summary)
 
                 if self.agent_config.verbose:

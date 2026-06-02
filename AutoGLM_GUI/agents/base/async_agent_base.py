@@ -313,7 +313,7 @@ class AsyncAgentBase(ABC):
                                 yield {
                                     "type": "done",
                                     "data": {
-                                        "message": "Watchdog stopped task after repeated actions",
+                                        "message": f"Watchdog stopped task after repeated ({WATCHDOG_REPEATED_ACTION_LIMIT}) actions",
                                         "steps": self._step_count,
                                         "success": False,
                                         "stop_reason": "watchdog_repeated_actions",
