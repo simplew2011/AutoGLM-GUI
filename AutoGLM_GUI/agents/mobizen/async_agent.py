@@ -311,7 +311,7 @@ class AsyncMobiZenAgent(AsyncAgentBase, AsyncAgent):
             from AutoGLM_GUI.actions import ActionResult
 
             result = ActionResult(success=False, should_finish=True, message=str(e))
-        
+
         if self._step_count <= 1:
             # same as mobizen official process
             time.sleep(3)

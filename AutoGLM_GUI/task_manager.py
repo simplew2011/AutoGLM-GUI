@@ -900,7 +900,9 @@ class TaskManager:
                     device_id=str(task["device_id"]),
                 )
                 self._abort_handlers[task_id] = run.cancel
-                logger.info(f"[Layered] start_run OK, task_id={task_id}, session_id={session_id}")
+                logger.info(
+                    f"[Layered] start_run OK, task_id={task_id}, session_id={session_id}"
+                )
 
                 last_tool_result = ""
                 event_type = ""
@@ -916,7 +918,9 @@ class TaskManager:
                         replay_source=metrics_source,
                         task=task,
                     )
-                    logger.debug(f"[Layered] event_type={event_type} payload_keys={sorted(event_payload.keys())}")
+                    logger.debug(
+                        f"[Layered] event_type={event_type} payload_keys={sorted(event_payload.keys())}"
+                    )
 
                     if event_type == "tool_result":
                         sub_steps = event_payload.get("steps", 0)
@@ -941,8 +945,12 @@ class TaskManager:
                             )
                         )
                         if not final_message and event_payload.get("success", False):
-                            final_message = last_tool_result or "Task completed (no summary)"
-                            logger.info(f"[Layered] done with empty content, using last tool_result: {final_message[:200]}")
+                            final_message = (
+                                last_tool_result or "Task completed (no summary)"
+                            )
+                            logger.info(
+                                f"[Layered] done with empty content, using last tool_result: {final_message[:200]}"
+                            )
                     elif event_type == "error":
                         final_message = str(event_payload.get("message", "Task failed"))
                         final_status = TaskStatus.FAILED.value

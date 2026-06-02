@@ -84,9 +84,8 @@ PLANNER_INSTRUCTIONS = """## 核心目标
 1. 如果需要从一个应用切换至另一个应用，需先回到桌面，再进入新应用。如：任务要求在淘宝和京东对商品进行比价，在淘宝完成价格收集后，先回到桌面，再启动京东进行价格收集。
 """
 
-def _sanitize_messages_for_log(
-    messages: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+
+def _sanitize_messages_for_log(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     sanitized = copy.deepcopy(messages)
     for msg in sanitized:
         if isinstance(msg.get("content"), list):
@@ -98,6 +97,7 @@ def _sanitize_messages_for_log(
                             url.split("base64,")[0] + "base64_content"
                         )
     return sanitized
+
 
 class TracedSQLiteSession(SQLiteSession):
     """SQLiteSession wrapper that exposes planner memory operations as spans."""

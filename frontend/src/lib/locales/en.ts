@@ -101,8 +101,7 @@ export const en = {
     extraBodyInvalid: 'Extra Body must be valid JSON',
     agentMobizenDesc:
       'Based on MobiZen-GUI model, uses tool_call format for GUI automation',
-    agentVaphoneDesc:
-      'Based on VAPhone model',
+    agentVaphoneDesc: 'Based on VAPhone model',
   },
   deviceSidebar: {
     devices: 'Devices',

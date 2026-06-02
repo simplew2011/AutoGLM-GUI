@@ -307,7 +307,9 @@ class ActionHandler:
         self, action: dict[str, Any], width: int, height: int
     ) -> ActionResult:
         """Handle interaction request (user choice needed)."""
-        return ActionResult(True, False, message="INTERACT_REQUIRED: User interaction required")
+        return ActionResult(
+            True, False, message="INTERACT_REQUIRED: User interaction required"
+        )
 
     @staticmethod
     def _default_confirmation(message: str) -> bool:

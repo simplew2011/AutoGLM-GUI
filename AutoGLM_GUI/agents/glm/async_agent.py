@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import copy
 import traceback
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -65,7 +64,7 @@ class AsyncGLMAgent(AsyncAgentBase, AsyncAgent):
 
     def _get_default_system_prompt(self, lang: str) -> str:
         return get_system_prompt(lang)
-    
+
     def _prepare_initial_context(
         self,
         task: str,

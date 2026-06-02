@@ -173,10 +173,10 @@ class VaphoneParser:
 
         elif action_type == "HOME":
             return {"_metadata": "do", "action": "Home"}
-        
+
         elif action_type == "BACK":
             return {"_metadata": "do", "action": "Back"}
-        
+
         # Common model hallucinations — models trained on multi-framework
         # data may output these even though they aren't in the official
         # VAPhone action space. Handle them as correct UI intents.

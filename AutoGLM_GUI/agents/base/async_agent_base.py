@@ -108,7 +108,6 @@ class AsyncAgentBase(ABC):
         raise NotImplementedError
         yield  # pragma: no cover — make Pyright see this as async generator
 
-
     def _sanitize_messages_for_log(
         self, messages: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
@@ -123,7 +122,7 @@ class AsyncAgentBase(ABC):
                                 url.split("base64,")[0] + "base64_content"
                             )
         return sanitized
-    
+
     # ==================== 共享逻辑 ====================
     async def stream(
         self, task: str, *, continue_with: str | None = None
@@ -149,9 +148,7 @@ class AsyncAgentBase(ABC):
         self._cancel_event.clear()
 
         if continue_with is not None:
-            self._context.append(
-                MessageBuilder.create_user_message(continue_with)
-            )
+            self._context.append(MessageBuilder.create_user_message(continue_with))
             # Notify vaphone-style agents that have an info-reply mechanism
             set_info_reply = getattr(self, "set_info_reply", None)
             if callable(set_info_reply):
@@ -179,7 +176,9 @@ class AsyncAgentBase(ABC):
                                 "device_id": self.device.device_id,
                             },
                         ):
-                            screenshot = await asyncio.to_thread(self.device.get_screenshot)
+                            screenshot = await asyncio.to_thread(
+                                self.device.get_screenshot
+                            )
                             current_app = await asyncio.to_thread(
                                 self.device.get_current_app
                             )
@@ -188,7 +187,10 @@ class AsyncAgentBase(ABC):
                         stream_span.set_attributes(
                             {"success": False, "error_kind": "initial_device_state"}
                         )
-                        yield {"type": "error", "data": {"message": f"Device error: {e}"}}
+                        yield {
+                            "type": "error",
+                            "data": {"message": f"Device error: {e}"},
+                        }
                         yield {
                             "type": "done",
                             "data": {
@@ -270,9 +272,7 @@ class AsyncAgentBase(ABC):
                                     yield {
                                         "type": "takeover",
                                         "data": {
-                                            "message": step_data.get(
-                                                "message", ""
-                                            ),
+                                            "message": step_data.get("message", ""),
                                             "steps": self._step_count,
                                             "success": True,
                                             "stop_reason": "takeover",

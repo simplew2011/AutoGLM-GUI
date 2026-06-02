@@ -10,7 +10,6 @@
 
 import asyncio
 import base64
-import copy
 import traceback
 from collections.abc import AsyncGenerator, Callable
 from io import BytesIO
