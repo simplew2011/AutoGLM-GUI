@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   connectWifi,
   disconnectWifi,
@@ -318,6 +318,10 @@ export function ChatComponent() {
     intent_frequency_penalty: 0.2,
     intent_extra_body: '{}',
   });
+
+  // Used to restore unsaved edits when the config dialog is closed without saving.
+  const lastCommittedTempConfigRef = useRef(structuredClone(tempConfig));
+
   const selectedVisionPreset = getSelectedVisionPreset(tempConfig.base_url);
   const selectedDecisionPreset = getSelectedDecisionPreset(
     tempConfig.decision_base_url
@@ -371,7 +375,7 @@ export function ChatComponent() {
         });
         // 当后端返回空配置时，使用智谱预设作为默认值
         const useDefault = !data.base_url;
-        setTempConfig({
+        const newTempConfig = {
           base_url: useDefault
             ? VISION_PRESETS[0].config.base_url
             : data.base_url,
@@ -386,7 +390,7 @@ export function ChatComponent() {
           extra_body: data.extra_body ? JSON.stringify(data.extra_body) : '{}',
           agent_type: data.agent_type || 'glm-async',
           agent_config_params: data.agent_config_params || {},
-          default_max_steps: data.default_max_steps ?? '',
+          default_max_steps: (data.default_max_steps ?? '') as number | '',
           layered_max_turns: data.layered_max_turns || 50,
           decision_base_url: data.decision_base_url || '',
           decision_model_name: data.decision_model_name || 'glm-4.7',
@@ -419,7 +423,10 @@ export function ChatComponent() {
           intent_extra_body: data.intent_extra_body
             ? JSON.stringify(data.intent_extra_body)
             : '{}',
-        });
+        };
+
+        setTempConfig(newTempConfig);
+        lastCommittedTempConfigRef.current = newTempConfig;
 
         if (useDefault) {
           setShowConfig(true);
@@ -432,7 +439,6 @@ export function ChatComponent() {
 
     loadConfiguration();
   }, []);
-
   useEffect(() => {
     if (searchParams.serial) {
       selectDeviceBySerial(searchParams.serial);
@@ -640,6 +646,8 @@ export function ChatComponent() {
         showToast(`配置已保存，但存在冲突: ${warningMsg}`, 'warning');
       }
 
+      // Update the committed snapshot after save
+      lastCommittedTempConfigRef.current = structuredClone(tempConfig);
       setShowConfig(false);
     } catch (err) {
       console.error('Failed to save config:', err);
@@ -735,7 +743,17 @@ export function ChatComponent() {
       )}
 
       {/* Config Dialog */}
-      <Dialog open={showConfig} onOpenChange={setShowConfig}>
+      <Dialog
+        open={showConfig}
+        onOpenChange={open => {
+          if (!open) {
+            // Dialog closing without save: restore tempConfig
+            // to the last committed state so unsaved edits are discarded.
+            setTempConfig(structuredClone(lastCommittedTempConfigRef.current));
+          }
+          setShowConfig(open);
+        }}
+      >
         <DialogContent className="sm:max-w-xl h-[75vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
