@@ -293,8 +293,8 @@ class _ConfigBaseModel(BaseModel):
     decision_model_name: str | None = None
     decision_api_key: str | None = None
     decision_max_tokens: int = 3000
-    decision_temperature: float = 0.0
-    decision_top_p: float = 0.85
+    decision_temperature: float = 0.7
+    decision_top_p: float = 0.80
     decision_frequency_penalty: float = 0.2
     decision_extra_body: dict[str, Any] = {}
 

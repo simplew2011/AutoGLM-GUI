@@ -294,8 +294,8 @@ export function ChatComponent() {
     decision_model_name: '',
     decision_api_key: '',
     decision_max_tokens: 3000 as number | '',
-    decision_temperature: 0.0,
-    decision_top_p: 0.85,
+    decision_temperature: 0.7,
+    decision_top_p: 0.8,
     decision_frequency_penalty: 0.2,
     decision_extra_body: '{}',
 
@@ -345,8 +345,8 @@ export function ChatComponent() {
           decision_model_name: data.decision_model_name || undefined,
           decision_api_key: data.decision_api_key || undefined,
           decision_max_tokens: data.decision_max_tokens ?? 3000,
-          decision_temperature: data.decision_temperature ?? 0.0,
-          decision_top_p: data.decision_top_p ?? 0.85,
+          decision_temperature: data.decision_temperature ?? 0.7,
+          decision_top_p: data.decision_top_p ?? 0.8,
           decision_frequency_penalty: data.decision_frequency_penalty ?? 0.2,
           decision_extra_body: data.decision_extra_body || {},
 
@@ -392,8 +392,8 @@ export function ChatComponent() {
           decision_model_name: data.decision_model_name || 'glm-4.7',
           decision_api_key: data.decision_api_key || '',
           decision_max_tokens: data.decision_max_tokens ?? 3000,
-          decision_temperature: data.decision_temperature ?? 0.0,
-          decision_top_p: data.decision_top_p ?? 0.85,
+          decision_temperature: data.decision_temperature ?? 0.7,
+          decision_top_p: data.decision_top_p ?? 0.8,
           decision_frequency_penalty: data.decision_frequency_penalty ?? 0.2,
           decision_extra_body: data.decision_extra_body
             ? JSON.stringify(data.decision_extra_body)
@@ -2140,8 +2140,8 @@ export function ChatComponent() {
                       config.decision_model_name || 'glm-4.7',
                     decision_api_key: config.decision_api_key || '',
                     decision_max_tokens: config.decision_max_tokens ?? 3000,
-                    decision_temperature: config.decision_temperature ?? 0.0,
-                    decision_top_p: config.decision_top_p ?? 0.85,
+                    decision_temperature: config.decision_temperature ?? 0.7,
+                    decision_top_p: config.decision_top_p ?? 0.8,
                     decision_frequency_penalty:
                       config.decision_frequency_penalty ?? 0.2,
                     decision_extra_body: config.decision_extra_body

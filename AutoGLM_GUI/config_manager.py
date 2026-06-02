@@ -70,8 +70,8 @@ _CONFIG_DEFAULTS: dict[str, Any] = {
     "decision_model_name": None,
     "decision_api_key": None,
     "decision_max_tokens": 3000,
-    "decision_temperature": 0.0,
-    "decision_top_p": 0.85,
+    "decision_temperature": 0.7,
+    "decision_top_p": 0.80,
     "decision_frequency_penalty": 0.2,
     "decision_extra_body": {},
     "chat_base_url": None,
@@ -162,8 +162,8 @@ class ConfigModel(BaseModel):
     decision_api_key: str | None = None
 
     decision_max_tokens: int = 3000
-    decision_temperature: float = 0.0
-    decision_top_p: float = 0.85
+    decision_temperature: float = 0.7
+    decision_top_p: float = 0.80
     decision_frequency_penalty: float = 0.2
     decision_extra_body: dict[str, Any] = {}
 
