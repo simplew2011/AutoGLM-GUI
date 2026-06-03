@@ -544,9 +544,16 @@ class TaskManager:
                     # 同 session 的后续任务都继续执行，不重置上下文
                     is_continue = session_id in self._active_sessions
                     self._active_sessions.add(session_id)
+                    stream_kwargs: dict[str, Any] = {}
+                    if is_continue:
+                        # Only pass continue_with when the agent supports it
+                        # (DroidRunAgent and MidsceneAgent don't have this param)
+                        sig = inspect.signature(agent.stream)
+                        if "continue_with" in sig.parameters:
+                            stream_kwargs["continue_with"] = task["input_text"]
                     async for event in agent.stream(
                         task["input_text"],
-                        continue_with=task["input_text"] if is_continue else None,
+                        **stream_kwargs,
                     ):
                         event_type = event["type"]
                         event_data = dict(event.get("data", {}))
@@ -578,6 +585,7 @@ class TaskManager:
                         final_message = str(event_data.get("message", ""))
                         final_status = TaskStatus.SUCCEEDED.value
                         stop_reason = "takeover"
+                        step_count = int(event_data.get("steps", step_count))
                     elif event_type == "done":
                         final_message = str(event_data.get("message", ""))
                         final_status = (
